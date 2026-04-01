@@ -9,6 +9,8 @@
 \usepackage{hyperref}
 \usepackage{booktabs}
 \usepackage{authblk}
+\usepackage{float}
+\usepackage{caption}
 \usepackage[margin=2.5cm]{geometry}
 \usepackage[utf8]{inputenc}
 
@@ -30,13 +32,62 @@
 \section{Related Work}
 % Vio: relevant work, limitations
 
+
 \section{Dataset}
-% Isa: DeepFashion2 overview, inputs/outputs
 
+To train and evaluate our model, we use the DeepFashion2 dataset \cite{ge2019deepfashion2}.
+DeepFashion2 is a large collection of clothing images containing 491K images and 801K
+individual clothing items across 13 categories: short-sleeved shirt, long-sleeved shirt,
+short-sleeved outwear, long-sleeved outwear, vest, sling, shorts, trousers, skirt,
+short-sleeved dress, long-sleeved dress, vest dress, and sling dress. The dataset is
+divided into a training set (391K images), a validation set (34K images), and a test
+set (67K images).
 
+The images come in two types: commercial images, which are clean photos taken in
+controlled settings such as online shops, and consumer images, which are real-world
+photos taken by people in everyday conditions. This distinction is important for our
+project, as we aim to process photos that users take of their own wardrobe, which
+closely resemble consumer images. Figure~\ref{fig:grid} shows a selection of images
+from the validation set, illustrating the variety of clothing categories and image
+conditions present in the dataset.
 
-\section{Model Architecture}
-% Romano: Mask R-CNN, training details
+Each clothing item in the dataset is annotated with a bounding box, which is a
+rectangle surrounding the item, a category label indicating the type of clothing,
+and a pixel-level segmentation mask tracing the exact outline of the garment.
+As shown in Figure~\ref{fig:mask}, the segmentation mask makes it possible to
+distinguish the garment from its background, which is the key annotation that
+enables our digital wardrobe pipeline.
+
+This dataset supports four tasks: clothes detection, landmark estimation, instance
+segmentation, and consumer-to-shop retrieval. For our project, we focus
+on instance segmentation, where the model takes an RGB image as input and produces,
+for each detected clothing item, a predicted bounding box, a category label, and a
+pixel-level segmentation mask.
+
+\begin{center}
+\begin{minipage}{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth, height=5cm, keepaspectratio]{figures/deepfashion2_layout}
+    \captionof{figure}{A selection of images from the DeepFashion2 validation set.}
+    \label{fig:grid}
+\end{minipage}
+\hfill
+\begin{minipage}{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth, height=5cm, keepaspectratio]{figures/deepfashion2_mask}
+    \captionof{figure}{Original image, mask, and isolated garment.}
+    \label{fig:mask}
+\end{minipage}
+\end{center}
+
+The dataset presents several challenges relevant to our setting. Over 50\% of items
+are partially or heavily occluded, more than 30\% are partially outside the image
+frame, and items vary widely in scale. These variations reflect the conditions under
+which users photograph their own clothing, and training on such a diverse dataset
+makes the model more likely to generalise to real wardrobe photos.
+\clearpage
+\section{Method}
+
 
 \section{Possible Extensions}
 % Isa: LLM-based extensions

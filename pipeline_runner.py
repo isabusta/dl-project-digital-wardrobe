@@ -1,3 +1,6 @@
+from data_processing import get_dataloaders
+import torch
+
 class PipelineRunner:
     def __init__(self):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'

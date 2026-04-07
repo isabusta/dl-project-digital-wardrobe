@@ -12,7 +12,6 @@ annotation file (e.g. 000001.json). We convert these annotations to COCO format
 using deepfashion2_to_coco.py before loading them here.
 
 Dataset: https://github.com/switchablenorms/DeepFashion2
-
 """
 
 # Imports
@@ -21,12 +20,12 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from pycocotools.coco import COCO
 from PIL import Image
-import numpy as np
 import torchvision.transforms as T
+# import numpy as np  # will be needed again for masks in Mask R-CNN extension
 
 # Define configurations for images
 # automatically detect if running on Colab
-if os.path.exists('/content/'):
+if os.path.exists('/content/drive/MyDrive/'):
     # running on Google Colab
     CONFIG = {
         "val_images": "/content/validation/validation/image/",
@@ -35,7 +34,7 @@ if os.path.exists('/content/'):
         "train_annos": "/content/drive/MyDrive/Deepfashion2/deepfashion2_train.json"
     }
 else:
-    # running locally, update paths to match your setup
+    # running locally — update these paths to match your machine
     CONFIG = {
         "val_images": "/Users/isabellebustamante/deepfashion2/validation/image/",
         "val_annos": "/Users/isabellebustamante/deepfashion2/json_for_validation/deepfashion2_val.json",
@@ -43,81 +42,64 @@ else:
         "train_annos": ""
     }
 
+
 class ClothingDataset(Dataset):
     """
-    Loads data from directory
-    Each sample returns one image and its annotations
-    (bounding boxes, category labels, pixel masks).
+    Loads data from directory.
+    Each sample returns one image and its category label.
     """
 
     def __init__(self, root_dir, annos_json, mode='train'):
         self.root_dir = root_dir
-        self.coco = COCO(annos_json) #Loads the entire COCO annotation JSON file into memory and builds the index. This replaces the need for manually scanning the directory for image files and annotation files.
+        self.coco = COCO(annos_json)  # loads the entire COCO annotation JSON file into memory and builds the index
         self.transform = self._get_transforms(mode)
-        self.samples = list(self.coco.imgs.keys())# gets the list of all image ids from the COCO index
-        # self._scan_directory() not needed, COCO() already indexes all images
+        self.samples = list(self.coco.imgs.keys())  # list of all image IDs
+        # self._scan_directory() COCO() already indexes all images
 
     #def _scan_directory(self):
-        # Get all subcategories 
+        # Get all subcategories
         # Store all images in self.samples
-
 
     def _get_transforms(self, mode):
         # Resize, normalization
-        # ToTensor converts the PIL image to a PyTorch tensor
         return T.Compose([T.ToTensor()])
 
     def __len__(self):
+        # returns total number of images in the dataset
         return len(self.samples)
 
     def __getitem__(self, idx):
         # Open image
-        # get the image id
         img_id = self.samples[idx]
 
         # get the image filename from the COCO index
         img_info = self.coco.imgs[img_id]
 
-        #build  the path and open the image, force RGB format
+        # build the path and open the image, force RGB format
         img_path = os.path.join(self.root_dir, img_info['file_name'])
         image = Image.open(img_path).convert('RGB')
 
-        # load annotations for this image, one image can have multiple garments, each is a different annotation
+        # load annotations for this image
         ann_ids = self.coco.getAnnIds(imgIds=img_id)
         anns = self.coco.loadAnns(ann_ids)
 
-        # extract bounding boxes, category labels, pixel masks from each annotation
-        boxes, labels, masks = [], [], []
-        for ann in anns:
-            #COCO stores box as [x, y, width, height]
-            x, y, w, h = ann['bbox']
-            boxes.append([x, y, x+w, y+h])# convert to [x1, y1, x2, y2]
-            labels.append(ann['category_id']) # category_id is an integer from 1-13 representing the garment type
-            masks.append(self.coco.annToMask(ann))  # annToMask converts the polygon segmentation into a binary pixel mask, 1 = garment pixel, 0 = background pixel
-
         # return image, label
-        target = {
-            'boxes': torch.tensor(boxes, dtype=torch.float32),
-            'labels': torch.tensor(labels, dtype=torch.int64),
-            'masks': torch.tensor(np.array(masks), dtype=torch.uint8),
-            'image_id': torch.tensor([img_id]),
-        }
+        # taking the first garment's category as the image label
+        # boxes, labels, masks = [], [], []
+        # for ann in anns:
+        #     x, y, w, h = ann['bbox']
+        #     boxes.append([x, y, x+w, y+h])
+        #     labels.append(ann['category_id'])
+        #     masks.append(self.coco.annToMask(ann))
+        label = anns[0]['category_id'] if anns else 0
 
-        return self.transform(image), target
+        return self.transform(image), label
 
 
-def get_dataloaders(data_dir=None, test_size = 0.2, random_seed = 42):
-    """
-    Create data loader for train, validation 
-    Returns: train_loader, val_loader, class_names
-    train_dataset = ClothingDataset(data_dir, mode='train')
-    val_dataset = ClothingDataset(data_dir, mode='val')
-    
-    """
-    # create the validation dataset using ClothingDataset class
+def get_dataloaders(data_dir=None, test_size=0.2, random_seed=42):
     val_dataset = ClothingDataset(
         CONFIG['val_images'],  # folder with images
-        CONFIG['val_annos'],  # COCO annotation file
+        CONFIG['val_annos'],   # COCO annotation file
         mode='val'
     )
 
@@ -128,7 +110,9 @@ def get_dataloaders(data_dir=None, test_size = 0.2, random_seed = 42):
         collate_fn=lambda x: tuple(zip(*x))
     )
 
+    # add train_loader here when training on Colab
     return val_loader
+
 
 if __name__ == '__main__':
     val_dataset = ClothingDataset(
@@ -137,7 +121,6 @@ if __name__ == '__main__':
         mode='val'
     )
     print(f"Validation images: {len(val_dataset)}")
-    image, target = val_dataset[0]
+    image, label = val_dataset[0]
     print(f"Image shape: {image.shape}")
-    print(f"Boxes: {target['boxes']}")
-    print(f"Labels: {target['labels']}")
+    print(f"Label: {label}")

@@ -25,7 +25,7 @@ import numpy as np
 import torchvision.transforms as T
 
 # Define configurations for images
-# automatically detect if running on Colab or local Mac
+# automatically detect if running on Colab
 if os.path.exists('/content/'):
     # running on Google Colab
     CONFIG = {

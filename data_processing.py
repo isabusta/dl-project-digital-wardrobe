@@ -25,13 +25,23 @@ import numpy as np
 import torchvision.transforms as T
 
 # Define configurations for images
-CONFIG = {
-    "val_images": "/Users/isabellebustamante/deepfashion2/validation/image/",
-    "val_annos": "/Users/isabellebustamante/deepfashion2/json_for_validation/deepfashion2_val.json",
-    "train_images": "",
-    "train_annos": ""
-}
-
+# automatically detect if running on Colab or local Mac
+if os.path.exists('/content/'):
+    # running on Google Colab
+    CONFIG = {
+        "val_images": "/content/validation/validation/image/",
+        "val_annos": "/content/drive/MyDrive/Deepfashion2/deepfashion2_val.json",
+        "train_images": "/content/train/train/image/",
+        "train_annos": "/content/drive/MyDrive/Deepfashion2/deepfashion2_train.json"
+    }
+else:
+    # running locally on Mac
+    CONFIG = {
+        "val_images": "/Users/isabellebustamante/deepfashion2/validation/image/",
+        "val_annos": "/Users/isabellebustamante/deepfashion2/json_for_validation/deepfashion2_val.json",
+        "train_images": "",
+        "train_annos": ""
+    }
 
 class ClothingDataset(Dataset):
     """

@@ -5,8 +5,8 @@
 Download the data from the shared Google Drive folder: https://drive.google.com/drive/folders/1C3nL9-XXMb_OBw8sebamyO9c704BE8_E. It contains:
 - `train.zip` training images (191,961 images)
 - `validation.zip` validation images (32,153 images)
-- `deepfashion2_train.json` training annotations ready to use
-- `deepfashion2_val.json` validation annotations ready to use
+- `deepfashion2_train.json` training annotations loaded by `data_processing.py` during model training
+- `deepfashion2_val.json` validation annotations loaded by `data_processing.py` during model evaluation
 
 ### Setup Locally
 1. Download `train.zip` and `validation.zip` from shared Drive https://drive.google.com/drive/folders/1C3nL9-XXMb_OBw8sebamyO9c704BE8_E

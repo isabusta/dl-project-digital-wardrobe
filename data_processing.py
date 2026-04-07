@@ -35,7 +35,7 @@ if os.path.exists('/content/'):
         "train_annos": "/content/drive/MyDrive/Deepfashion2/deepfashion2_train.json"
     }
 else:
-    # running locally on Mac
+    # running locally, update paths to match your setup
     CONFIG = {
         "val_images": "/Users/isabellebustamante/deepfashion2/validation/image/",
         "val_annos": "/Users/isabellebustamante/deepfashion2/json_for_validation/deepfashion2_val.json",

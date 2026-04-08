@@ -114,6 +114,71 @@ def get_dataloaders(data_dir=None, test_size=0.2, random_seed=42):
     return val_loader
 
 
+
+
+"""
+create dataset via: 
+train_set = FashionDataSet(/content/train)
+"""
+class FashionDataset(Dataset):
+  def __init__(self, root, transform = None):
+    self.root = root
+    self.transform = transform
+
+    self.img_dir = os.path.join(root, "image")
+    self.ann_dir = os.path.join(root, "annos")
+    self.images = sorted(os.listdir(self.img_dir))
+
+  def __len__(self):
+    return len(self.images)
+
+  def __getitem__(self, idx):
+      img_name = self.images[idx]
+      img_path = os.path.join(self.img_dir, img_name)
+
+      ann_path = os.path.join(
+          self.ann_dir,
+          img_name.replace(".jpg", ".json")
+      )
+
+      # 1. open image and save original size
+      image = Image.open(img_path).convert("RGB")
+      orig_w, orig_h = image.size
+
+      # ---------- ANNOTATION ----------
+      with open(ann_path) as f:
+          ann = json.load(f)
+
+      boxes = []
+      labels = []
+
+        # DeepFashion2 JSON Struktur
+      for key, item in ann.items():
+
+          if key.startswith("item"):
+            b = item['bounding_box']
+            boxes.append([b[0]/orig_w, b[1]/orig_h, b[2]/orig_w, b[3]/orig_h])
+            labels.append(item["category_id"])
+
+      #raw_box = boxes[0]
+
+      # 4. normalize the box BOX (values between 0 and 1)
+      #box_norm = torch.tensor([
+      #    raw_box[0] / orig_w, # xmin
+      #    raw_box[1] / orig_h, # ymin
+      #    raw_box[2] / orig_w, # xmax
+      #    raw_box[3] / orig_h  # ymax
+      #], dtype=torch.float32)
+      target = {}
+      target["boxes"] = torch.tensor(boxes, dtype=torch.float32)
+      target["labels"] = torch.tensor(labels, dtype=torch.long)
+
+      if self.transform:
+          image = self.transform(image)
+
+      return image, target
+
+
 if __name__ == '__main__':
     val_dataset = ClothingDataset(
         CONFIG['val_images'],
@@ -124,3 +189,6 @@ if __name__ == '__main__':
     image, label = val_dataset[0]
     print(f"Image shape: {image.shape}")
     print(f"Label: {label}")
+
+
+

@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="ai_env" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="ai_env" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.12 (DL_Project_Digital_Wardrobe)" project-jdk-type="Python SDK" />
 </project>

@@ -33,3 +33,12 @@ def collate_fn(batch):
   images = torch.stack([b[0] for b in batch])
   targets = [b[1] for b in batch]
   return images, targets
+
+
+def save_model(model, model_name: str, path: str):
+  # create Model directory
+  MODEL_PATH = Path(path)
+  MODEL_PATH.mkdir(parents=True, exist_ok=True)
+  MODEL_NAME = model_name
+  MODEL_SAVE_PATH = MODEL_PATH / MODEL_NAME
+  torch.save(obj=model.state_dict(), f=MODEL_SAVE_PATH)

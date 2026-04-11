@@ -1,9 +1,10 @@
 import torchvision
 from torchvision.io.image import decode_image
-from torchvision.models.detection import fasterrcnn_resnet50_fpn_v2, FasterRCNN_ResNet50_FPN_V2_Weights
+from torchvision.models.detection import fasterrcnn_resnet50_fpn_v2,, fasterrcnn_resnet50_fpn FasterRCNN_ResNet50_FPN_V2_Weights
 from torchvision.models.detection import FasterRCNN
 from torchvision.utils import draw_bounding_boxes
 from torchvision.transforms.functional import to_pil_image
+
 
 
 def create_resnet_50_v2_model(device):
@@ -24,3 +25,18 @@ def create_resnet_50_v2_model(device):
 
     model.to(device=device)
     return model
+
+def create_resnet_50(device):
+    model_resnet = fasterrcnn_resnet50_fpn(weights="DEFAULT")
+
+    # 2. Die Anzahl der Klassen anpassen (13 + 1)
+    num_classes = 14
+
+    in_features = model_resnet.roi_heads.box_predictor.cls_score.in_features
+
+    # 3. Den Box-Predictor durch einen neuen ersetzen
+    model_resnet.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCNNPredictor(in_features,
+                                                                                                      num_classes)
+
+    model_resnet.to(device=device)
+    return model_resnet

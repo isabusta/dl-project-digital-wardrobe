@@ -146,7 +146,7 @@ class ClothingDatasetResize(Dataset):
       # 1. open image and save original size
       image = Image.open(img_path).convert("RGB")
       orig_w, orig_h = image.size
-      new_w, new_h = 244, 244
+      new_w, new_h = 2224, 224
       ratio_w = new_w / orig_w
       ratio_h = new_h / orig_h
 

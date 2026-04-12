@@ -17,7 +17,7 @@
 \title{Digital Wardrobe \& Outfit Recommendation}
 
 
-\author{ Romano Brentani, Viola Meier, Isabelle Bustamante,}
+\author{ Romano Brentani, Viola Meier, Isabelle Bustamante}
 
 \date{\today}
 
@@ -27,21 +27,42 @@
 
 
 \section{Introduction}
-The automatic understanding of visual content has become one of the central challenges in modern computer vision and computer vison applications. In the current document we will describe a computer vision problem in the field of fashion industry, which we aim to solve by using deep learning methods.
+
+The automatic understanding of visual content has become one of the central challenges in modern computer vision and computer vision applications. In the current document we will describe a computer vision problem in the field of fashion industry, which we aim to solve by using deep learning methods.
 In particular, the fashion industry increasingly relies on intelligent systems capable of analyzing clothing-and fashion items from images for applications such as online retail search, recommendation systems, inventory management, and trend analysis. Manual annotation of fashion products is time-consuming, costly, and prone to inconsistency, motivating the development of automated methods that can recognize fashion items and describe their visual attributes and characteristics.
 
-\textbf{Problem Definition.}
-In this project, we address the task of \emph{fashion item recognition and attribute prediction} from images. Given an input image containing one or multiple fashion products, the goal can be described as the following two steps:
-\begin{enumerate}
-    \item classify the type of the fashion items present in the image(e.g., shirt, dress, shoes, trousers), and
-    \item predict semantic attributes describing each item, such as color, pattern, material, or style.
-\end{enumerate}
+The visual analysis and classification of clothing has gained increasing importance in the context of e-commerce and social media ~\cite{wang_2018, alamsyah_2019}.
+A comprehensive analysis of clothing involves several sub-tasks, including landmark detection, classification, and semantic segmentation in real-world scenes.
 
+\textbf{Related Work.}
+A classical machine learning approach is presented in ~\cite{bossard_2012}.
+The work describes a pipeline for clothing classification based on learning visual attributes. These attributes are used to represent the visual properties of garments.
+For classification, a Random Forest is employed, combined with multiple Support Vector Machines (SVMs) for attribute learning.
+
+More recent work mainly focuses on CNN-based methods ~\cite{alamsyah_2019, maryamah_2023, wang_2018}. These studies use different datasets.
+While ~\cite{bossard_2012} focuses on upper-body clothing, ~\cite{alamsyah_2019} investigates headwear and accessories using Instagram images.
+~\cite{maryamah_2023} utilizes data collected from five official websites of well-known fashion brands.
+These approaches achieve strong performance in tasks such as classification, retrieval, and landmark detection, particularly on large datasets ~\cite{wang_2018, maryamah_2023}.
+However, ~\cite{wang_2018} highlight the limitation that many models do not incorporate domain-specific knowledge.
+To address this issue, ~\cite{wang_2018} propose a knowledge-guided fashion network that jointly performs landmark localization and classification.
+A key component is the Fashion Grammar Model, which combines a Bidirectional Convolutional Recurrent Neural Network (BCRNN) with domain-specific knowledge.
+Grammar models originate from the field of computer vision and enable the modeling of semantic relationships between objects and humans, as well as the structured decomposition of scenes.
+Additionally, category-guided and landmark-aware attention mechanisms are employed.
+The results show that incorporating domain-specific knowledge leads to better performance compared to isolated neural network approaches.
+
+
+\textbf{Problem Definition.}
+In this project, we address the task of \emph{fashion item recognition and attribute prediction} from images. Given an input image containing one or multiple fashion products, the goal can be described as the following three steps:
+\begin{enumerate}
+    \item detect and segment: the fashion items present in the image,
+    \item classify the type: of each detected item (e.g., shirt, dress, trousers), and
+    \item predict attributes: describing each item, such as pattern, sleeve length, neckline, fabric, or fit.
+\end{enumerate}
 Formally, let $x \in \mathbb{R}^{H \times W \times C}$ denote an input image. The model learns a function
 \[
 f_\theta(x) = (y_c, y_a),
 \]
-where $y_c$ represents the categorical class label(s) of fashion items and $y_a$ denotes a set of attribute predictions. The task therefore combines image classification with multi-label attribute recognition. In order to solve the defined problem above three deep learning approaches will be applies, which will be described more in detail in section~\ref{sec:method}, Methods. 
+where $y_c$ represents the categorical class label(s) of fashion items and $y_a$ denotes a set of attribute predictions. The task therefore combines image classification with multi-label attribute recognition. In order to solve the defined problem above, deep learning approaches will be applied, which will be described more in detail in section~\ref{sec:method}, Methods.
 
 \textbf{Evaluation Criteria.}
 Model performance is evaluated using standard computer vision metrics. Classification accuracy and top-$k$ accuracy are used to measure category prediction performance, while attribute prediction is evaluated using multi-label metrics such as precision, recall, and F1-score. These metrics quantify both recognition correctness and descriptive capability.
@@ -69,6 +90,46 @@ the top-$k$ recommendations generated by the model. It evaluates whether
 compatible fashion items are ranked highly enough to be presented to
 the user.}, compatibility accuracy, or user-preference simulation metrics. This extension demonstrates how visual recognition outputs can serve as a foundation for higher-level decision-making systems in intelligent fashion applications.
 
+
+
+\section{Dataset}
+
+To train and evaluate our model, we use the DeepFashion2 dataset \cite{ge2019deepfashion2}.
+DeepFashion2 is a large collection of clothing images containing 100K images and 801K
+individual clothing items across 13 categories: short-sleeved shirt, long-sleeved shirt,
+short-sleeved outwear, long-sleeved outwear, vest, sling, shorts, trousers, skirt,
+short-sleeved dress, long-sleeved dress, vest dress, and sling dress.
+
+The images come in two types: commercial images, which are clean photos taken in
+controlled settings such as online shops, and consumer images, which are real-world
+photos taken by people in everyday conditions.
+
+Each clothing item in the dataset is annotated with a bounding box, which is a
+rectangle surrounding the item, a category label indicating the type of clothing,
+and a pixel-level segmentation mask tracing the exact outline of the garment.
+
+ For our project, we focus on instance segmentation, where the model takes an RGB image as input and produces,
+for each detected clothing item, a predicted bounding box, a category label, and a
+pixel-level segmentation mask.
+
+\subsection{Attribute Dataset}
+\label{sec:attribute_dataset}
+
+Deepfashion2 does not include attribute labels beyond the 13 garment categories. To enable attribute prediction, we use a subset of the Category and Attribute Prediction Benchmark from DeepFashion~\cite{liu2016deepfashion}.
+
+This subset contains 20{,}000 images annotated with 26 attributes organized into six mutually exclusive groups:
+\begin{itemize}
+    \item \textbf{Pattern} (7): floral, graphic, striped, embroidered, pleated, solid, lattice
+    \item \textbf{Sleeve length} (3): long sleeve, short sleeve, sleeveless
+    \item \textbf{Garment length} (3): maxi, mini, no dress
+    \item \textbf{Neckline} (4): crew, v-neckline, square, no neckline
+    \item \textbf{Fabric} (6): denim, chiffon, cotton, leather, faux, knit
+    \item \textbf{Fit} (3): tight, loose, conventional
+\end{itemize}
+
+Within each group, exactly one attribute is active per image, making each group a single-label classification problem. DeepFashion2 trains the detection and segmentation stage, while the DeepFashion subset trains the attribute classifier.
+
+
 \section{Method}
 \label{sec:method}
 
@@ -78,15 +139,19 @@ Rather than focusing on a single modeling strategy, this project investigates tw
 
 Both approaches considered in this work are trained under comparable conditions and optimized to learn category recognition and attribute estimation.
 
+
 \subsection{Problem Formulation}
 
-Given an input image $x \in \mathbb{R}^{H \times W \times C}$, the goal is to predict a fashion category label $y_c$ together with a set of semantic attributes $y_a$. The learning problem can be formulated as
+Given an input image, the system first detects and segments individual garments using a ResNet-50-FPN backbone, producing a bounding box, category label, and segmentation mask for each item, and then predicts six attributes from the cropped garment region using a second ResNet-based classifier. Two alternative end-to-end approaches---a CNN+RNN and a Transformer---are also investigated for comparison.
 
-\[
-f_\theta(x) = (y_c, y_a),
-\]
+%Given an input image $x \in \mathbb{R}^{H \times W \times C}$, the goal is to detect each garment, predict a fashion category label $y_c$ together with a set of semantic attributes $y_a$. The learning problem can be formulated as
 
-where $f_\theta$ denotes a parameterized model trained on labeled fashion images. The task combines multi-class classification with multi-label prediction.
+%\[
+%f_\theta(x) = (y_c, y_a),
+%\]
+
+%where $f_\theta$ denotes a parameterized model trained on labeled fashion images. The task combines multi-class classification with multi-label prediction.
+
 
 \subsection{Approach 1: Convolutional and Sequential Modeling}
 
@@ -97,6 +162,7 @@ This paradigm assumes that relationships between fashion attributes can be inter
 The detailed architectural realization of this approach is described in Section~\ref{sec:cnn_rnn_architecture}.
 
 \subsection{Approach 2: Transformer-Based Modeling}
+
 
 The second approach investigates transformer-based architectures as an alternative paradigm for visual understanding. Instead of modeling dependencies sequentially via recurrent neural networks, transformers employ self-attention mechanisms to learn relationships between visual elements and semantic concepts simultaneously.
 
@@ -118,6 +184,7 @@ By analyzing both paradigms under consistent experimental settings, the project 
 In this section, we describe the intended architectures for the two approaches presented in the previous subsections. It is important to note that these descriptions are preliminary architecture designs, outlining how the models are expected to be structured. The actual implementations may differ based on experimental results, optimization considerations, and data-specific adjustments.
 
 \subsubsection{CNN + Recurrent Neural Network Architecture}
+\label{sec:cnn_rnn_architecture}
 
 For the first approach, the planned architecture consists of two main components: A convolutional feature extractor (CNN) and a sequential prediction module (RNN). The convolutional layers are intended to capture hierarchical visual features such as edges, textures, shapes, and patterns from the input images. These features will then be aggregated into a compact representation vector.
 
@@ -126,6 +193,7 @@ The sequential module, likely based on recurrent neural networks such as LSTM or
 The architecture is modular and interpretable, separating visual feature extraction from structured attribute prediction. However, exact layer sizes, number of filters, and other hyperparameters will be determined during the implementation and tuning phases.
 
 \subsubsection{Transformer-Based Architecture}
+\label{sec:transformer_architecture}
 
 The second approach leverages transformer-based models for attention-driven global reasoning. The planned architecture processes input images by first optionally extracting preliminary feature maps through a convolutional backbone. These feature maps are then divided into sequences of visual tokens, which serve as input to transformer encoder layers.
 
@@ -133,71 +201,8 @@ Self-attention mechanisms within the transformer are intended to model dependenc
 
 This architecture integrates global context modeling directly into the representation learning stage, in contrast to the sequential reasoning of the CNN + RNN approach. Layer configurations, number of attention heads, and tokenization strategies are considered design choices that will be finalized during actual implementation.
 
-\textbf{Summary.} Both planned architectures are designed to handle the dual tasks of fashion category classification and attribute prediction. These descriptions serve as conceptual frameworks to guide future implementation and experimentation. Actual model configurations may evolve based on empirical results and practical considerations.
+\textbf{Summary.} All planned architectures are designed to handle the dual tasks of fashion category classification and attribute prediction. These descriptions serve as conceptual frameworks to guide future implementation and experimentation. Actual model configurations may evolve based on empirical results and practical considerations.
 % Romano: motivate problem, formal description, evaluation criteria
-
-\section{Related Work}
-% Vio: relevant work, limitations
-
-
-\section{Dataset}
-
-To train and evaluate our model, we use the DeepFashion2 dataset \cite{ge2019deepfashion2}.
-DeepFashion2 is a large collection of clothing images containing 491K images and 801K
-individual clothing items across 13 categories: short-sleeved shirt, long-sleeved shirt,
-short-sleeved outwear, long-sleeved outwear, vest, sling, shorts, trousers, skirt,
-short-sleeved dress, long-sleeved dress, vest dress, and sling dress. The dataset is
-divided into a training set (391K images), a validation set (34K images), and a test
-set (67K images).
-
-The images come in two types: commercial images, which are clean photos taken in
-controlled settings such as online shops, and consumer images, which are real-world
-photos taken by people in everyday conditions. This distinction is important for our
-project, as we aim to process photos that users take of their own wardrobe, which
-closely resemble consumer images. Figure~\ref{fig:grid} shows a selection of images
-from the validation set, illustrating the variety of clothing categories and image
-conditions present in the dataset.
-
-Each clothing item in the dataset is annotated with a bounding box, which is a
-rectangle surrounding the item, a category label indicating the type of clothing,
-and a pixel-level segmentation mask tracing the exact outline of the garment.
-As shown in Figure~\ref{fig:mask}, the segmentation mask makes it possible to
-distinguish the garment from its background, which is the key annotation that
-enables our digital wardrobe pipeline.
-
-This dataset supports four tasks: clothes detection, landmark estimation, instance
-segmentation, and consumer-to-shop retrieval. For our project, we focus
-on instance segmentation, where the model takes an RGB image as input and produces,
-for each detected clothing item, a predicted bounding box, a category label, and a
-pixel-level segmentation mask.
-
-\begin{center}
-\begin{minipage}{0.45\textwidth}
-    \centering
-    \includegraphics[width=\textwidth, height=5cm, keepaspectratio]{figures/deepfashion2_layout}
-    \captionof{figure}{A selection of images from the DeepFashion2 validation set.}
-    \label{fig:grid}
-\end{minipage}
-\hfill
-\begin{minipage}{0.45\textwidth}
-    \centering
-    \includegraphics[width=\textwidth, height=5cm, keepaspectratio]{figures/deepfashion2_mask}
-    \captionof{figure}{Original image, mask, and isolated garment.}
-    \label{fig:mask}
-\end{minipage}
-\end{center}
-
-The dataset presents several challenges relevant to our setting. Over 50\% of items
-are partially or heavily occluded, more than 30\% are partially outside the image
-frame, and items vary widely in scale. These variations reflect the conditions under
-which users photograph their own clothing, and training on such a diverse dataset
-makes the model more likely to generalise to real wardrobe photos.
-\clearpage
-\section{Method}
-
-
-\section{Possible Extensions}
-% Isa: LLM-based extensions
 
 
 

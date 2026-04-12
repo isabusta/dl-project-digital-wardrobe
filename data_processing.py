@@ -21,6 +21,7 @@ from torch.utils.data import Dataset, DataLoader
 from pycocotools.coco import COCO
 from PIL import Image
 import torchvision.transforms as T
+import json
 # import numpy as np  # will be needed again for masks in Mask R-CNN extension
 
 # Define configurations for images
@@ -120,7 +121,7 @@ def get_dataloaders(data_dir=None, test_size=0.2, random_seed=42):
 create dataset via: 
 train_set = FashionDataSet(/content/train)
 """
-class FashionDataset(Dataset):
+class ClothingDatasetResize(Dataset):
   def __init__(self, root, transform = None):
     self.root = root
     self.transform = transform
@@ -132,6 +133,7 @@ class FashionDataset(Dataset):
   def __len__(self):
     return len(self.images)
 
+  #returns one sample of Data
   def __getitem__(self, idx):
       img_name = self.images[idx]
       img_path = os.path.join(self.img_dir, img_name)
@@ -144,6 +146,9 @@ class FashionDataset(Dataset):
       # 1. open image and save original size
       image = Image.open(img_path).convert("RGB")
       orig_w, orig_h = image.size
+      new_w, new_h = 2224, 224
+      ratio_w = new_w / orig_w
+      ratio_h = new_h / orig_h
 
       # ---------- ANNOTATION ----------
       with open(ann_path) as f:
@@ -157,18 +162,13 @@ class FashionDataset(Dataset):
 
           if key.startswith("item"):
             b = item['bounding_box']
-            boxes.append([b[0]/orig_w, b[1]/orig_h, b[2]/orig_w, b[3]/orig_h])
+            boxes.append([
+                b[0] * ratio_w,
+                b[1] * ratio_h,
+                b[2] * ratio_w,
+                b[3] * ratio_h
+            ])
             labels.append(item["category_id"])
-
-      #raw_box = boxes[0]
-
-      # 4. normalize the box BOX (values between 0 and 1)
-      #box_norm = torch.tensor([
-      #    raw_box[0] / orig_w, # xmin
-      #    raw_box[1] / orig_h, # ymin
-      #    raw_box[2] / orig_w, # xmax
-      #    raw_box[3] / orig_h  # ymax
-      #], dtype=torch.float32)
       target = {}
       target["boxes"] = torch.tensor(boxes, dtype=torch.float32)
       target["labels"] = torch.tensor(labels, dtype=torch.long)

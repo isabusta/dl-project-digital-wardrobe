@@ -1,6 +1,4 @@
 """
-
-image_path = "/content/train/train/image/000021.jpg"
 train_image, target = train_dataset[20]
 plot_image(train_image, target)
 """

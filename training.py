@@ -82,13 +82,20 @@ def test_step_resnet(model: torch.nn.Module,
     return avg_confidence
 
 
+from tqdm.auto import tqdm
+from torch.optim.lr_scheduler import ExponentialLR
+
+
 def train(model: torch.nn.Module,
           train_dataloader: torch.utils.data.DataLoader,
           test_dataloader: torch.utils.data.DataLoader,
           optimizer: torch.optim.Optimizer,
-          device="cuda", epochs: int = 10):
-    results = {"train_loss": [],
-               "test_loss": []}
+          device=device, epochs: int = 10,
+          scheduler: ExponentialLR = None):
+    results = {
+        "train_loss": [],
+        "test_confidence": []
+    }
 
     for epoch in tqdm(range(epochs)):
         train_loss = train_step_resnet(model=model,
@@ -99,10 +106,12 @@ def train(model: torch.nn.Module,
         test_loss = test_step_resnet(model=model,
                                      dataloader=test_dataloader,
                                      device=device)
+        if scheduler is not None:
+            scheduler.step()
 
-        print(f"Epoch: {epoch} | Train Loss: {train_loss:.4f} | Test Loss: {test_loss:.4f}")
+        print(f"Epoch: {epoch} | Train Loss: {train_loss:.4f} | Test Confidence: {test_loss:.4f}")
 
         results["train_loss"].append(train_loss)
-        results["test_loss"].append(test_loss)
+        results["test_confidence"].append(test_loss)
 
     return results

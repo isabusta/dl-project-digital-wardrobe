@@ -55,11 +55,7 @@ class ClothingDataset(Dataset):
         self.coco = COCO(annos_json)  # loads the entire COCO annotation JSON file into memory and builds the index
         self.transform = self._get_transforms(mode)
         self.samples = list(self.coco.imgs.keys())  # list of all image IDs
-        # self._scan_directory() COCO() already indexes all images
 
-    #def _scan_directory(self):
-        # Get all subcategories
-        # Store all images in self.samples
 
     def _get_transforms(self, mode):
         # Resize, normalization

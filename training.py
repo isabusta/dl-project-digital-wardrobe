@@ -20,7 +20,7 @@ def train_step_resnet(model: torch.nn.Module,
         targets = []
         for t in y:
             d = {}
-            d["boxes"] = (t["boxes"] * 224).to(device)
+            d["boxes"] = (t["boxes"]).to(device)
             d["labels"] = t["labels"].to(device)
             targets.append(d)
 

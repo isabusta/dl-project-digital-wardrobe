@@ -67,6 +67,7 @@ def test_step_resnet(model: torch.nn.Module,
     total_score = 0
     num_predictions = 0
     total_boxes, total_gt_boxes = 0, 0
+    score_threshold = 0.5
 
     with torch.inference_mode():
         for images, targets in dataloader:
@@ -78,8 +79,10 @@ def test_step_resnet(model: torch.nn.Module,
             outputs = model(images)
 
             for output, target in zip(outputs, targets):
-                if len(output['scores']) > 0:
-                    total_score += torch.mean(output['scores']).item()
+                scores = output['scores']
+                scores = scores[scores > score_threshhold]
+                if len(scores) > 0:
+                    total_score += torch.mean(scores).item()
                     num_predictions += 1
 
                 pred_boxes = output['boxes']

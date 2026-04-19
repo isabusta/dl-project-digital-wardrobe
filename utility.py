@@ -32,6 +32,24 @@ def collate_fn(batch):
   targets = [b[1] for b in batch]
   return images, targets
 
+def mask_boxes(image, boxes):
+    """
+    Masks an image by setting all pixels outside the predicted bounding boxes to white.
+    Returns:
+        The modified image tensor with pixels outside boxes set to white.
+    """
+    # Create a boolean mask with same spatial dimensions as the image
+    mask = torch.zeros(image.shape[1:], dtype=torch.bool)
+
+    # Mark all pixels inside each bounding box as True
+    for box in boxes:
+        x1, y1, x2, y2 = box.int()
+        mask[y1:y2, x1:x2] = True
+
+    # Set all pixels outside the boxes to white
+    image[:, ~mask] = 1.0
+
+    return image
 
 def save_model(model, model_name: str, path: str):
   # create Model directory

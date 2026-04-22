@@ -97,7 +97,7 @@ def build_dataloaders(
 
 
 if __name__ == "__main__":
-    CROPS_ROOT = "/Users/isabellebustamante/DeepFashion_attribute_recognition/crops"
+    CROPS_ROOT = Path(__file__).resolve().parent / "data" / "crops"
 
     for split in ("train", "val", "test"):
         ds = AttributeDataset(CROPS_ROOT, split)

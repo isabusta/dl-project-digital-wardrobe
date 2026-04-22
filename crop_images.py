@@ -14,11 +14,25 @@ Writes:
 """
 
 import csv
+import os
 from pathlib import Path
 from PIL import Image
 
-DATA_ROOT  = Path("/Users/isabellebustamante/DeepFashion_attribute_recognition")
-CROPS_ROOT = DATA_ROOT / "crops"
+REPO_ROOT = Path(__file__).resolve().parent
+
+if os.path.exists('/content/drive/MyDrive/'):
+    CONFIG = {
+        "data_root":  "/content/drive/MyDrive/DeepFashion_attribute_recognition",
+        "crops_root": str(REPO_ROOT / "data" / "crops"),
+    }
+else:
+    CONFIG = {
+        "data_root":  "/Users/isabellebustamante/DeepFashion_attribute_recognition",
+        "crops_root": str(REPO_ROOT / "data" / "crops"),
+    }
+
+DATA_ROOT  = Path(CONFIG["data_root"])
+CROPS_ROOT = Path(CONFIG["crops_root"])
 
 # Attribute groups in order — mirrors attribute_data.py
 ATTRIBUTES_BY_TYPE = {

@@ -1,6 +1,9 @@
 import torch
 from tqdm.auto import tqdm
 
+from tqdm.auto import tqdm
+from torch.optim.lr_scheduler import ExponentialLR
+
 
 def train_step_resnet(model: torch.nn.Module,
                       dataloader: torch.utils.data.DataLoader,
@@ -100,16 +103,13 @@ def test_step_resnet(model: torch.nn.Module,
     return avg_confidence, recall
 
 
-from tqdm.auto import tqdm
-from torch.optim.lr_scheduler import ExponentialLR
-
-
 def train(model: torch.nn.Module,
           train_dataloader: torch.utils.data.DataLoader,
           test_dataloader: torch.utils.data.DataLoader,
           optimizer: torch.optim.Optimizer,
           device=device, epochs: int = 10,
           scheduler: ExponentialLR = None):
+
     results = {
         "train_loss": [],
         'train_box_loss': [], 

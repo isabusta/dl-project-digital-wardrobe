@@ -1,6 +1,6 @@
 import torchvision
 from torchvision.io.image import decode_image
-from torchvision.models.detection import fasterrcnn_resnet50_fpn_v2,, fasterrcnn_resnet50_fpn FasterRCNN_ResNet50_FPN_V2_Weights
+from torchvision.models.detection import fasterrcnn_resnet50_fpn_v2, fasterrcnn_resnet50_fpn, FasterRCNN_ResNet50_FPN_V2_Weights
 from torchvision.models.detection import FasterRCNN
 from torchvision.utils import draw_bounding_boxes
 from torchvision.transforms.functional import to_pil_image

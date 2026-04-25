@@ -27,3 +27,31 @@ def make_box_prediction(model, img_path: str, transformer, device):
     output = model(image)
 
   return output
+
+def find_best_clothing_box(predictions):
+    """
+    We are looking for the Box with the highest Score,
+    which may contain fashion items. The COCO-Modell does not have fashion item categories.
+    We therefore take the person Box oder the Box with the highest confidence.
+    """
+    boxes = predictions[0]['boxes']
+    scores = predictions[0]['scores']
+    labels = predictions[0]['labels']
+
+    if len(boxes) == 0:
+      return None
+
+    # COCO Label for 'person' is 1. Often fashion is on persons.
+    # Wir suchen zuerst nach Personen.
+    person_indices = (labels == 1).nonzero(as_tuple=True)[0]
+
+    if len(person_indices) > 0:
+      # Take the person-Box with the highest Score
+      best_person_idx = person_indices[scores[person_indices].argmax()]
+      return boxes[best_person_idx].cpu().numpy()
+
+    # if no person was found, just take the beste Box
+    best_box_idx = scores.argmax()
+    return boxes[best_box_idx].cpu().numpy()
+
+

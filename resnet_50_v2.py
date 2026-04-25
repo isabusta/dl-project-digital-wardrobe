@@ -6,7 +6,7 @@ from torchvision.utils import draw_bounding_boxes
 from torchvision.transforms.functional import to_pil_image
 
 
-
+# This is for the creation of the baseline models for box detection
 def create_resnet_50_v2_model(device):
 
     # Initialize model with the best available weights

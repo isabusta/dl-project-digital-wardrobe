@@ -29,7 +29,7 @@ def make_box_prediction(model, img_path: str, transformer, device):
   return output
 
 
-def find_best_clothing_box(predictions):
+def find_best_clothing_box_1(predictions):
     """
     We are looking for the Box with the highest Score,
     which may contain fashion items. The COCO-Modell does not have fashion item categories.
@@ -54,6 +54,52 @@ def find_best_clothing_box(predictions):
     # if no person was found, just take the beste Box
     best_box_idx = scores.argmax()
     return boxes[best_box_idx].cpu().numpy()
+
+def find_best_clothing_box(predictions, score_threshold=0.5, iou_threshold=0.4):
+    boxes  = predictions[0]['boxes']
+    scores = predictions[0]['scores']
+    labels = predictions[0]['labels']
+
+    if len(boxes) == 0:
+        return None, []
+
+    # ── 1. Schwache Detektionen rausfiltern ──────────────────
+    keep = scores > score_threshold
+    boxes  = boxes[keep]
+    scores = scores[keep]
+    labels = labels[keep]
+
+    if len(boxes) == 0:
+        return None, []
+
+    # ── 2. NMS pro Label ─────────────────────────────────────
+    # Pullover + Handtasche überlappen sich → beide behalten
+    # Pullover + Pullover überlappen sich   → Duplikat, eines entfernen
+    keep_indices = []
+    for label in labels.unique():
+        label_mask    = labels == label
+        label_boxes   = boxes[label_mask]
+        label_scores  = scores[label_mask]
+        label_indices = label_mask.nonzero(as_tuple=True)[0]
+
+        kept = nms(label_boxes, label_scores, iou_threshold)
+        keep_indices.append(label_indices[kept])
+
+    keep_indices = torch.cat(keep_indices)
+    boxes  = boxes[keep_indices]
+    scores = scores[keep_indices]
+    labels = labels[keep_indices]
+
+    print(f"Gefundene Objekte nach NMS: {len(boxes)}")
+
+    # ── 3. Person-Box bevorzugen (COCO label 1) ──────────────
+    person_indices = (labels == 1).nonzero(as_tuple=True)[0]
+    if len(person_indices) > 0:
+        best_idx = person_indices[scores[person_indices].argmax()]
+    else:
+        best_idx = scores.argmax()
+
+    return boxes[best_idx].cpu().numpy(), boxes.cpu().numpy()
 
 
 # Pipeline for detecting, cropping and classifying

@@ -20,7 +20,7 @@ class AttributeResNet50(nn.Module):
         backbone.fc = nn.Identity()
         self.backbone = backbone
 
-        # One classification head per attribute group (mirrors FastRCNNPredictor swap)
+        # One classification head per attribute group
         self.heads = nn.ModuleDict({
             t: nn.Linear(in_features, num_classes_per_type[t])
             for t in TYPE_ORDER

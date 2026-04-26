@@ -10,17 +10,17 @@ class AttributeResNet50(nn.Module):
     def __init__(self, num_classes_per_type: dict):
         super().__init__()
 
-        # Load pretrained ResNet50
+
         backbone = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2)
 
-        # Get number of input features for the classifier
+
         in_features = backbone.fc.in_features  # 2048
 
-        # Replace the pretrained head with Identity — we attach our own heads
+
         backbone.fc = nn.Identity()
         self.backbone = backbone
 
-        # One classification head per attribute group
+
         self.heads = nn.ModuleDict({
             t: nn.Linear(in_features, num_classes_per_type[t])
             for t in TYPE_ORDER

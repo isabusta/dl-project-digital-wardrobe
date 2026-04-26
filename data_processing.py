@@ -22,6 +22,9 @@ from pycocotools.coco import COCO
 from PIL import Image
 import torchvision.transforms as T
 import json
+from os import listdir
+
+
 # import numpy as np  # will be needed again for masks in Mask R-CNN extension
 
 # Define configurations for images
@@ -173,6 +176,79 @@ class ClothingDatasetResize(Dataset):
           image = self.transform(image)
 
       return image, target
+
+
+# Prepare Data for classification trainig
+# First we need to crop the training pictures according to the boxes
+# in the groundtruth images
+# for example start: 1000, sample_size: 5000
+
+def crop_images_by_groundtruth(annos_dir, img_dir, img_output_dir, annos_output_dir, start: int, sample_size):
+  if not os.path.exists(output_dir):
+        os.makedirs(img_output_dir)
+
+  if not os.path.exists(annos_output_dir):
+    os.makedirs(annos_output_dir)
+
+  annos_list = os.listdir(annos_dir)
+  annos_list.sort()
+  annos_list = annos_list[start : start + sample_size]
+
+  # get the path/directory
+  for anno_name in annos_list:
+    # check if the image ends with png
+    if (anno_name.endswith(".json")):
+
+      ann_path = os.path.join(
+          annos_dir,
+          anno_name
+      )
+
+      img_name = anno_name.replace(".json", "")
+      img_path = os.path.join(
+          img_dir,
+          img_name + ".jpg"
+      )
+
+      if not os.path.exists(img_path):
+        print(f"Image missing: {img_path}")
+        continue
+
+      #open image and save original size
+      image = Image.open(img_path).convert("RGB")
+
+      # ---------- ANNOTATION ----------
+      with open(ann_path) as f:
+          ann = json.load(f)
+
+      for i, (key, item) in enumerate(ann.items()):
+
+          if key.startswith("item"):
+            box = item['bounding_box']
+            # mask the picture accoridng to the box (mask with white pixel or black pixels?)
+            """
+            bounding_box: [x1,y1,x2,y2]，where x1 and y_1 represent the upper left point
+            coordinate of bounding box, x_2 and y_2 represent the lower right point coordinate
+            of bounding box. (width=x2-x1;height=y2-y1)
+            """
+            region = image.crop((box[0], box[1], box[2], box[3]))
+
+            final_image = region
+
+            # save (category)
+            category = item.get('category_name', 'unknown').replace(" ", "_")
+            final_image.save(os.path.join(img_output_dir, f"{img_name}_{category}_{i}.jpg"))
+
+             # Write a json file in annos_output_dir with item
+            anno_output_path = os.path.join(
+                annos_output_dir,
+                f"{img_name}_{category}_{i}.json"
+            )
+
+            with open(anno_output_path, "w") as out_f:
+                json.dump({f"item{i}": item}, out_f, indent=4)
+
+  print(f"Done. {len(annos_list)} Files edited.")
 
 
 if __name__ == '__main__':

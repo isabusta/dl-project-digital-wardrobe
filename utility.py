@@ -58,3 +58,15 @@ def save_model(model, model_name: str, path: str):
   MODEL_NAME = model_name
   MODEL_SAVE_PATH = MODEL_PATH / MODEL_NAME
   torch.save(obj=model.state_dict(), f=MODEL_SAVE_PATH)
+
+def load_model(model: torch.nn.Module, path):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # load parameters
+    state_dict = torch.load(path, map_location=device)
+    model.load_state_dict(state_dict)
+
+    # Shift to device
+    model.to(device)
+
+    return model

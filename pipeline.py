@@ -103,32 +103,25 @@ class Pipeline:
     def evaluate(self, results, target):
         """
         Evaluates predictions against ground truth.
-        Returns: all_correct, all_total
+        Returns: correct, detected, total
+        - detected:  number of predicted boxes vs GT items
+        - correct:   correctly classified labels
+        - total:     total GT items
         """
-        gt_boxes     = target['boxes']
-        gt_labels    = target['labels']
-        pred_boxes_t = torch.tensor([r['bounding_box'] for r in results.values()
-                                    if r['bounding_box']], dtype=torch.float32)
+        gt_labels = target['labels']
+        total     = len(gt_labels)
+        detected  = len(results)   
+        correct   = 0
 
-        correct = 0
-        total   = 0
+        if len(results) == 0:
+            return 0, 0, total
 
-        for gt_box, gt_label in zip(gt_boxes, gt_labels):
+        for (item_key, pred_item), gt_label in zip(results.items(), gt_labels):
             gt_label_0idx = gt_label.item() - 1
-
-            if len(pred_boxes_t) == 0:
-                total += 1
-                continue
-
-            ious           = box_iou(gt_box.unsqueeze(0), pred_boxes_t)
-            best_match_idx = ious.argmax().item()
-            matched_item   = list(results.values())[best_match_idx]
-
-            if matched_item['category_id'] - 1 == gt_label_0idx:
+            if pred_item['category_id'] - 1 == gt_label_0idx:
                 correct += 1
-            total += 1
 
-        return correct, total
+        return correct, detected, total
 
     def run(self, test_data_path, output_dir='predictions'):
         """
@@ -142,8 +135,10 @@ class Pipeline:
         test_loader  = DataLoader(test_dataset, batch_size=1, shuffle=False,
                                   collate_fn=collate_fn, num_workers=2)
 
-        all_correct = 0
-        all_total   = 0
+    
+        all_correct  = 0
+        all_detected = 0
+        all_total    = 0
 
         for img_idx, (images, targets) in enumerate(tqdm(test_loader, desc="Running Pipeline")):
             img_tensor = images[0].to(self.device)
@@ -170,9 +165,10 @@ class Pipeline:
 
             # evaluation against ground truth
             if self.eval_mode:
-                correct, total = self.evaluate(results, target)
-                all_correct   += correct
-                all_total     += total
+                correct, detected, total = self.evaluate(results, target)
+                all_correct  += correct
+                all_detected += detected
+                all_total    += total
 
             # print result
             if self.debug:
@@ -192,7 +188,9 @@ class Pipeline:
                 json.dump(results, f, indent=4)
 
         if self.eval_mode and not self.debug:
-            accuracy = all_correct / all_total if all_total > 0 else 0
-            print(f"\nDone! {all_total} items from {len(test_dataset)} images")
-            print(f"Accuracy: {all_correct}/{all_total} = {accuracy:.2%}")
-            return accuracy
+            detection_rate = all_detected / all_total if all_total > 0 else 0
+            label_accuracy = all_correct  / all_total if all_total > 0 else 0
+            print(f"\nDone! {len(test_dataset)} images | {all_total} GT items")
+            print(f"Box Detection:  {all_detected}/{all_total} = {detection_rate:.2%}")
+            print(f"Label Accuracy: {all_correct}/{all_total}  = {label_accuracy:.2%}")
+            return label_accuracy

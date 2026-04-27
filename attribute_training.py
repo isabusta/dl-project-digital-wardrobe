@@ -81,13 +81,16 @@ def train(model: torch.nn.Module,
           optimizer: torch.optim.Optimizer,
           device="mps",
           epochs: int = 10,
-          scheduler: ExponentialLR = None):
+          scheduler: ExponentialLR = None,
+          checkpoint_path: str = None):
 
     results = {
         "train_loss": [],
         "val_acc": [],
         "val_acc_per_head": [],
     }
+
+    best_val_acc = 0
 
     for epoch in tqdm(range(epochs)):
 
@@ -103,10 +106,19 @@ def train(model: torch.nn.Module,
         if scheduler is not None:
             scheduler.step()
 
-        print(f"Epoch {epoch+1}/{epochs} | "
-              f"Loss: {train_loss:.4f} | "
-              f"Val Acc: {val_acc:.4f} | "
-              + " | ".join(f"{t}: {acc_per_head[t]:.4f}" for t in TYPE_ORDER))
+        # Save checkpoint if val accuracy improved
+        if val_acc > best_val_acc and checkpoint_path is not None:
+            best_val_acc = val_acc
+            torch.save({'model_state_dict': model.state_dict(), 'epoch': epoch+1, 'val_acc': val_acc}, checkpoint_path)
+            print(f"Epoch {epoch+1}/{epochs} | "
+                  f"Loss: {train_loss:.4f} | "
+                  f"Val Acc: {val_acc:.4f} ✓ saved | "
+                  + " | ".join(f"{t}: {acc_per_head[t]:.4f}" for t in TYPE_ORDER))
+        else:
+            print(f"Epoch {epoch+1}/{epochs} | "
+                  f"Loss: {train_loss:.4f} | "
+                  f"Val Acc: {val_acc:.4f} | "
+                  + " | ".join(f"{t}: {acc_per_head[t]:.4f}" for t in TYPE_ORDER))
 
         results["train_loss"].append(train_loss)
         results["val_acc"].append(val_acc)

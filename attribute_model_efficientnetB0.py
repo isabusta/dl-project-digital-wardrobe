@@ -17,6 +17,8 @@ class AttributeEfficientNetB0(nn.Module):
         backbone.classifier = nn.Identity()
         self.backbone = backbone
 
+        self.dropout = nn.Dropout(p=0.3)
+
         self.heads = nn.ModuleDict({
             t: nn.Linear(in_features, num_classes_per_type[t])
             for t in TYPE_ORDER
@@ -24,6 +26,7 @@ class AttributeEfficientNetB0(nn.Module):
 
     def forward(self, x):
         features = self.backbone(x)  # [B, 1280]
+        features = self.dropout(features)
         return {t: self.heads[t](features) for t in TYPE_ORDER}
 
 

@@ -1,33 +1,10 @@
 from PIL import Image
+import torch
 import torchvision
+from torchvision.ops import nms
+from torchvision import transforms
 
-"""
-This Method takes a model and an image path as input
-Then the model is used
-to make a object detection.
-img_path: path to the image
-returns: box x1, y1, x2, y2
-transformer: transformer to transform the data suitable for the model
-"""
-def make_box_prediction(model, img_path: str, transformer, device):
-  # open image and save original size
-  image = torchvision.io.read_image(img_path).type(torch.float32)
-
-  # transform the image
-  image = transformer.transform(image).unsqueeze(0)
-
-  # put the image on the device
-  image.to(device)
-
-  with torch.inference_mode():
-    # set model in evaluation mode
-    model.eval()
-
-    # compute the prediction
-    output = model(image)
-
-  return output
-
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def find_best_clothing_box_1(predictions):
     """
@@ -55,51 +32,6 @@ def find_best_clothing_box_1(predictions):
     best_box_idx = scores.argmax()
     return boxes[best_box_idx].cpu().numpy()
 
-def find_best_clothing_box(predictions, score_threshold=0.5, iou_threshold=0.4):
-    boxes  = predictions[0]['boxes']
-    scores = predictions[0]['scores']
-    labels = predictions[0]['labels']
-
-    if len(boxes) == 0:
-        return None, []
-
-    # ── 1. Schwache Detektionen rausfiltern ──────────────────
-    keep = scores > score_threshold
-    boxes  = boxes[keep]
-    scores = scores[keep]
-    labels = labels[keep]
-
-    if len(boxes) == 0:
-        return None, []
-
-    # ── 2. NMS pro Label ─────────────────────────────────────
-    # Pullover + Handtasche überlappen sich → beide behalten
-    # Pullover + Pullover überlappen sich   → Duplikat, eines entfernen
-    keep_indices = []
-    for label in labels.unique():
-        label_mask    = labels == label
-        label_boxes   = boxes[label_mask]
-        label_scores  = scores[label_mask]
-        label_indices = label_mask.nonzero(as_tuple=True)[0]
-
-        kept = nms(label_boxes, label_scores, iou_threshold)
-        keep_indices.append(label_indices[kept])
-
-    keep_indices = torch.cat(keep_indices)
-    boxes  = boxes[keep_indices]
-    scores = scores[keep_indices]
-    labels = labels[keep_indices]
-
-    print(f"Gefundene Objekte nach NMS: {len(boxes)}")
-
-    # ── 3. Person-Box bevorzugen (COCO label 1) ──────────────
-    person_indices = (labels == 1).nonzero(as_tuple=True)[0]
-    if len(person_indices) > 0:
-        best_idx = person_indices[scores[person_indices].argmax()]
-    else:
-        best_idx = scores.argmax()
-
-    return boxes[best_idx].cpu().numpy(), boxes.cpu().numpy()
 
 
 # Pipeline for detecting, cropping and classifying

@@ -1,3 +1,8 @@
+import torch
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from pathlib import Path
+
 """
 train_image, target = train_dataset[20]
 plot_image(train_image, target)
@@ -25,6 +30,22 @@ def plot_image(tensor_image, target):
 
   ax.imshow(img_np)
   plt.show()
+
+def plot_image_1(tensor_image, target):
+    img_np = tensor_image.permute(1, 2, 0).cpu().numpy()
+    fig, ax = plt.subplots(figsize=(5, 5))
+
+    for box in target['boxes']:
+        xmin, ymin, xmax, ymax = box.tolist()
+   
+        rect = patches.Rectangle(
+            (xmin, ymin), xmax - xmin, ymax - ymin,
+            linewidth=2, edgecolor='r', facecolor='none'
+        )
+        ax.add_patch(rect)
+
+    ax.imshow(img_np)
+    plt.show()
 
 def collate_fn(batch):
   # batch = list of tuples: (image, boxes, labels)

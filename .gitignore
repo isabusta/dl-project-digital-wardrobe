@@ -1,1 +1,14 @@
+# Model weights
+*.pth
+*.pt
 
+# Python
+__pycache__/
+*.pyc
+
+# Data
+data/
+*.zip
+
+# Jupyter checkpoints
+.ipynb_checkpoints/

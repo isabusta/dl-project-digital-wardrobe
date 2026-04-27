@@ -43,9 +43,9 @@ def train_step_attribute(model: torch.nn.Module,
     return average_train_loss
 
 
-def test_step_attribute(model: torch.nn.Module,
-                        dataloader: torch.utils.data.DataLoader,
-                        device="mps"):
+def val_step_attribute(model: torch.nn.Module,
+                       dataloader: torch.utils.data.DataLoader,
+                       device="mps"):
 
     model.eval()
 
@@ -96,9 +96,9 @@ def train(model: torch.nn.Module,
                                          optimizer=optimizer,
                                          device=device)
 
-        val_acc, acc_per_head = test_step_attribute(model=model,
-                                                    dataloader=test_dataloader,
-                                                    device=device)
+        val_acc, acc_per_head = val_step_attribute(model=model,
+                                                   dataloader=test_dataloader,
+                                                   device=device)
 
         if scheduler is not None:
             scheduler.step()

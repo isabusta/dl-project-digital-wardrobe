@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from data_processing import ClothingDatasetResize
 from utility import collate_fn, plot_image_1
+from attribute_data import TYPE_ORDER
 
 # To do 
 # Method for evaluation with different Score 
@@ -29,6 +30,14 @@ class Pipeline:
                              std=[0.229, 0.224, 0.225]),
     ])
 
+    # added by Isabelle — transform for the attribute model (same normalization as classifier)
+    attribute_transformer = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225]),
+    ])
+
     categories = {
         0: "short sleeve top",    1: "long sleeve top",      2: "short sleeve outwear",
         3: "long sleeve outwear", 4: "vest",                  5: "sling",
@@ -37,13 +46,15 @@ class Pipeline:
         12: "sling dress"
     }
 
-    def __init__(self, obj_detector, classifier, debug=False, img_idx = 0, eval_mode=False):
+    # added by Isabelle — attr_model is optional, pipeline works without it
+    def __init__(self, obj_detector, classifier, attr_model=None, debug=False, img_idx=0, eval_mode=False):
         self.device       = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.obj_detector = obj_detector.to(self.device)
         self.classifier   = classifier.to(self.device)
+        self.attr_model   = attr_model.to(self.device) if attr_model is not None else None
         self.debug        = debug
-        self.eval_mode = eval_mode
-        self.idx = img_idx 
+        self.eval_mode    = eval_mode
+        self.idx          = img_idx
 
     def detect_objects(self, img_tensor, score_threshold=0.5, iou_threshold=0.5):
         # model to eval mode
@@ -112,6 +123,16 @@ class Pipeline:
         pred_label = self.categories[pred_id]
 
         return pred_id, pred_label
+
+    # added by Isabelle — runs attribute model on a cropped garment image
+    # returns dict of predicted class index per attribute type e.g. {"texture": 2, "sleeve": 1, ...}
+    # only called if attr_model was passed to __init__
+    def predict_attributes(self, cropped_img):
+        tensor = self.attribute_transformer(cropped_img).unsqueeze(0).to(self.device)
+        self.attr_model.eval()
+        with torch.inference_mode():
+            logits = self.attr_model(tensor)
+        return {t: logits[t].argmax(dim=1).item() for t in TYPE_ORDER}
 
     def evaluate(self, results, target):
         """
@@ -203,10 +224,13 @@ class Pipeline:
                 crops = self.crop_img(img_tensor, predicted_boxes)
                 for i, (box, crop) in enumerate(zip(predicted_boxes, crops)):
                     pred_id, pred_label = self.predict(crop)
+                    # added by Isabelle — attach attribute predictions if attr_model is available
+                    attrs = self.predict_attributes(crop) if self.attr_model is not None else {}
                     results[f"item{i+1}"] = {
                         "bounding_box":  [float(x) for x in box],
                         "category_id":   pred_id + 1,
-                        "category_name": pred_label
+                        "category_name": pred_label,
+                        "attributes":    attrs
                     }
 
             # evaluation against ground truth

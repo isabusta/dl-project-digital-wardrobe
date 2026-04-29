@@ -11,11 +11,11 @@ device = "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is
 def train_step_attribute(model: torch.nn.Module,
                          dataloader: torch.utils.data.DataLoader,
                          optimizer: torch.optim.Optimizer,
-                         device="mps"):
+                         device="mps",
+                         class_weights: dict = None):
 
     model.train()
 
-    criterion = nn.CrossEntropyLoss()
     total_train_loss = 0
 
     for batch, (X, y) in enumerate(dataloader):
@@ -29,7 +29,10 @@ def train_step_attribute(model: torch.nn.Module,
         outputs = model(X)
 
         # Sum CrossEntropyLoss across all 6 heads
-        loss = sum(criterion(outputs[t], targets[t]) for t in TYPE_ORDER)
+        loss = sum(
+            nn.CrossEntropyLoss(weight=class_weights[t] if class_weights else None)(outputs[t], targets[t])
+            for t in TYPE_ORDER
+        )
 
         total_train_loss += loss.item()
 
@@ -82,7 +85,8 @@ def train(model: torch.nn.Module,
           device="mps",
           epochs: int = 10,
           scheduler: ExponentialLR = None,
-          checkpoint_path: str = None):
+          checkpoint_path: str = None,
+          class_weights: dict = None):
 
     results = {
         "train_loss": [],
@@ -97,7 +101,8 @@ def train(model: torch.nn.Module,
         train_loss = train_step_attribute(model=model,
                                          dataloader=train_dataloader,
                                          optimizer=optimizer,
-                                         device=device)
+                                         device=device,
+                                         class_weights=class_weights)
 
         val_acc, acc_per_head = val_step_attribute(model=model,
                                                    dataloader=test_dataloader,

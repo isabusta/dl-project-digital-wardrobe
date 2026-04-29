@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from data_processing import ClothingDatasetResize
 from utility import collate_fn, plot_image_1
-from attribute_data import TYPE_ORDER
+from attribute_data import TYPE_ORDER, LABEL_NAMES
 
 # To do 
 # Method for evaluation with different Score 
@@ -132,7 +132,7 @@ class Pipeline:
         self.attr_model.eval()
         with torch.inference_mode():
             logits = self.attr_model(tensor)
-        return {t: logits[t].argmax(dim=1).item() for t in TYPE_ORDER}
+        return {t: LABEL_NAMES[t][logits[t].argmax(dim=1).item()] for t in TYPE_ORDER}
 
     def evaluate(self, results, target):
         """

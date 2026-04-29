@@ -9,6 +9,15 @@ from PIL import Image
 TYPE_ORDER = ["texture", "sleeve", "length", "neckline", "fabric", "fit"]
 NUM_CLASSES_PER_TYPE = {"texture": 7, "sleeve": 3, "length": 3, "neckline": 4, "fabric": 6, "fit": 3}
 
+LABEL_NAMES = {
+    "texture":  ["floral", "graphic", "striped", "embroidered", "pleated", "solid", "lattice"],
+    "sleeve":   ["long sleeve", "short sleeve", "sleeveless"],
+    "length":   ["maxi", "mini", "knee length"],
+    "neckline": ["crew neck", "v-neck", "square neck", "notched"],
+    "fabric":   ["chiffon", "denim", "knit", "lace", "leather", "sequin"],
+    "fit":      ["tight", "conventional", "loose"],
+}
+
 
 class AttributeDataset(Dataset):
     def __init__(self, crops_root: str | Path, split: str, transform=None):

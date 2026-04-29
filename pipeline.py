@@ -8,6 +8,13 @@ from tqdm import tqdm
 from data_processing import ClothingDatasetResize
 from utility import collate_fn, plot_image_1
 
+# To do 
+# Method for evaluation with different Score 
+# Plot for res net with classification and box prediction 
+# for training and for testing in same plot => store in json for later plot 
+# Images with box detection and detection after filtering 
+# have to train model again to create json file (weekend) ? 
+# run evaluation and store in json file 
 class Pipeline:
 
     test_transform = transforms.Compose([
@@ -30,14 +37,15 @@ class Pipeline:
         12: "sling dress"
     }
 
-    def __init__(self, obj_detector, classifier, debug=False, eval_mode=True):
+    def __init__(self, obj_detector, classifier, debug=False, img_idx = 0, eval_mode=False):
         self.device       = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.obj_detector = obj_detector.to(self.device)
         self.classifier   = classifier.to(self.device)
         self.debug        = debug
         self.eval_mode = eval_mode
+        self.idx = img_idx 
 
-    def detect_objects(self, img_tensor, score_threshold=0.5, iou_threshold=0.4):
+    def detect_objects(self, img_tensor, score_threshold=0.5, iou_threshold=0.5):
         # model to eval mode
         self.obj_detector.eval()
 
@@ -53,6 +61,10 @@ class Pipeline:
             print(f"Boxes before filtering: {len(boxes)}")
             plot_image_1(img_tensor, predictions[0])
 
+        if len(boxes) == 0:
+            return []
+
+        # filter out low confidence boxes
         keep   = scores > score_threshold
         boxes  = boxes[keep]
         scores = scores[keep]
@@ -62,7 +74,7 @@ class Pipeline:
             return []
 
         # filter out boxes that are too similar
-        # to prevent returning multiple boxes for same object
+        # if labels are the same and boxes are to similar only keep one box 
         keep_indices = []
         for label in labels.unique():
             label_mask    = labels == label
@@ -71,13 +83,14 @@ class Pipeline:
             keep_indices.append(label_indices[kept])
 
         keep_indices = torch.cat(keep_indices)
+        boxes        = boxes[keep_indices]
 
         # plot boxes after filtering
         if self.debug:
-            print(f"Boxes after filtering: {len(keep_indices)}")
-            plot_image_1(img_tensor, {'boxes': boxes[keep_indices]})
+            print(f"Boxes after filtering: {len(boxes)}")
+            plot_image_1(img_tensor, {'boxes': boxes})
 
-        return boxes[keep_indices].cpu().numpy()
+        return boxes.cpu().numpy()
 
     def crop_img(self, img_tensor, boxes):
         pil_img = transforms.ToPILImage()(img_tensor.cpu())
@@ -102,26 +115,58 @@ class Pipeline:
 
     def evaluate(self, results, target):
         """
-        Evaluates predictions against ground truth.
-        Returns: correct, detected, total
-        - detected:  number of predicted boxes vs GT items
-        - correct:   correctly classified labels
-        - total:     total GT items
+        Score 1: Exact Match:
+            Only correct if detected == total GT boxes
+            AND all predicted labels match GT labels (order independent)
+
+        Score 2: Coverage:
+            How many GT labels are covered by predictions (order independent)
+            Penalized if more boxes detected than GT (precision penalty)
         """
-        gt_labels = target['labels']
-        total     = len(gt_labels)
-        detected  = len(results)   
-        correct   = 0
+        gt_labels      = target['labels']
+        total          = len(gt_labels)
+        detected       = len(results)
 
-        if len(results) == 0:
-            return 0, 0, total
+        gt_label_list  = [l.item() - 1 for l in gt_labels]
+        pred_label_list = [r['category_id'] - 1 for r in results.values()]
 
-        for (item_key, pred_item), gt_label in zip(results.items(), gt_labels):
-            gt_label_0idx = gt_label.item() - 1
-            if pred_item['category_id'] - 1 == gt_label_0idx:
-                correct += 1
+        if detected == 0:
+            return {
+                "total":          total,
+                "detected":       0,
+                "exact_match":    0,
+                "coverage":       0.0,
+                "precision":      0.0,
+            }
 
-        return correct, detected, total
+        # Exact Matches 
+        # only valid if detected == total
+        # count how many predicted labels are in GT (no duplicates)
+        gt_remaining = gt_label_list.copy()
+        matched = 0
+        for pred in pred_label_list:
+            if pred in gt_remaining:
+                matched += 1
+                gt_remaining.remove(pred)
+
+        exact_match = 1 if (detected == total and matched == total) else 0
+
+        # Coverage + Precision
+        # coverage: how many GT labels are covered by predictions
+        coverage  = matched / total if total > 0 else 0.0
+
+        # precision: penalize if more boxes predicted than GT
+        # if detected == total => precision = 1.0 
+        # if detected > total  => precision < 1.0
+        precision = total / detected if detected > total else 1.0
+
+        return {
+            "total":       total,
+            "detected":    detected,
+            "exact_match": exact_match,   # 1 for exact match, 0 otherwise
+            "coverage":    round(coverage,  4),  # GT labels found
+            "precision":   round(precision, 4),  # penalty for extra boxes
+        }
 
     def run(self, test_data_path, output_dir='predictions'):
         """
@@ -136,9 +181,10 @@ class Pipeline:
                                   collate_fn=collate_fn, num_workers=2)
 
     
-        all_correct  = 0
-        all_detected = 0
-        all_total    = 0
+        all_exact    = 0
+        all_coverage = 0.0
+        all_precision = 0.0 
+        all_images   = 0
 
         for img_idx, (images, targets) in enumerate(tqdm(test_loader, desc="Running Pipeline")):
             img_tensor = images[0].to(self.device)
@@ -165,32 +211,49 @@ class Pipeline:
 
             # evaluation against ground truth
             if self.eval_mode:
-                correct, detected, total = self.evaluate(results, target)
-                all_correct  += correct
-                all_detected += detected
-                all_total    += total
+                scores        = self.evaluate(results, target)
+                all_exact    += scores['exact_match']
+                all_coverage += scores['coverage']
+                all_precision += scores['precision']
+                all_images   += 1
 
             # print result
-            if self.debug:
+            if self.debug and img_idx == self.idx:
                 print(f"\nImage: {img_name}")
                 if self.eval_mode:
                     print("── Ground Truth ──────────────────────")
                     for i, (gt_box, gt_label) in enumerate(zip(target['boxes'], target['labels'])):
                         print(f"  item{i+1}: {self.categories.get(gt_label.item()-1)} (id={gt_label.item()})")
+                    print(f"── Scores ────────────────────────────")
+                    print(f"  Exact Match: {scores['exact_match']} | detected {scores['detected']}/{scores['total']}")
+                    print(f"  Coverage:    {scores['coverage']:.2%}")
+                    print(f"  Precision:   {scores['precision']:.2%}")
                 print("── Predictions ───────────────────────")
                 for k, v in results.items():
                     print(f"  {k}: {v['category_name']} (id={v['category_id']})")
                 break
-
-            # save JSON
-            out_path = os.path.join(output_dir, img_name.replace('.jpg', '.json'))
-            with open(out_path, 'w') as f:
-                json.dump(results, f, indent=4)
+            
+            if not self.debug:
+                # save JSON
+                out_path = os.path.join(output_dir, img_name.replace('.jpg', '.json'))
+                with open(out_path, 'w') as f:
+                    json.dump(results, f, indent=4)
 
         if self.eval_mode and not self.debug:
-            detection_rate = all_detected / all_total if all_total > 0 else 0
-            label_accuracy = all_correct  / all_total if all_total > 0 else 0
-            print(f"\nDone! {len(test_dataset)} images | {all_total} GT items")
-            print(f"Box Detection:  {all_detected}/{all_total} = {detection_rate:.2%}")
-            print(f"Label Accuracy: {all_correct}/{all_total}  = {label_accuracy:.2%}")
-            return label_accuracy
+            print(f"\nDone! {all_images} images")
+            print(f"Exact Match:  {all_exact}/{all_images}  = {all_exact/all_images:.2%}")
+            print(f"Avg Coverage: {all_coverage/all_images:.2%}")
+            print(f"Avg Precision: {all_precision/all_images:.2%}") 
+
+            summary = {
+                "total_images":    all_images,
+                "exact_match":     all_exact,
+                "exact_match_pct": round(all_exact    / all_images, 4) if all_images > 0 else 0,
+                "avg_coverage":    round(all_coverage / all_images, 4) if all_images > 0 else 0,
+                "avg_precision":   round(all_precision / all_images, 4) if all_images > 0 else 0,
+            }
+
+            # save eval JSON
+            eval_path = os.path.join(output_dir, 'eval_results.json')
+            with open(eval_path, 'w') as f:
+                json.dump(summary, f, indent=4)

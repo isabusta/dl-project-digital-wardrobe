@@ -46,6 +46,10 @@ class Pipeline:
         12: "sling dress"
     }
 
+    # sleeve and neckline attributes are not meaningful for bottoms
+    BOTTOM_CATEGORIES = {"shorts", "trousers", "skirt"}
+    BOTTOM_ATTRS      = {"texture", "fabric", "fit", "length"}
+
     # added by Isabelle — attr_model is optional, pipeline works without it
     def __init__(self, obj_detector, classifier, attr_model=None, debug=False, img_idx=0, eval_mode=False):
         self.device       = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -225,7 +229,13 @@ class Pipeline:
                 for i, (box, crop) in enumerate(zip(predicted_boxes, crops)):
                     pred_id, pred_label = self.predict(crop)
                     # added by Isabelle — attach attribute predictions if attr_model is available
-                    attrs = self.predict_attributes(crop) if self.attr_model is not None else {}
+                    # only show relevant attributes based on garment type
+                    if self.attr_model is not None:
+                        attrs = self.predict_attributes(crop)
+                        if pred_label in self.BOTTOM_CATEGORIES:
+                            attrs = {k: v for k, v in attrs.items() if k in self.BOTTOM_ATTRS}
+                    else:
+                        attrs = {}
                     results[f"item{i+1}"] = {
                         "bounding_box":  [float(x) for x in box],
                         "category_id":   pred_id + 1,

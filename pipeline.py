@@ -128,9 +128,8 @@ class Pipeline:
 
         return pred_id, pred_label
 
-    # added by Isabelle — runs attribute model on a cropped garment image
-    # returns dict of predicted class index per attribute type e.g. {"texture": 2, "sleeve": 1, ...}
-    # only called if attr_model was passed to __init__
+
+
     def predict_attributes(self, cropped_img):
         tensor = self.attribute_transformer(cropped_img).unsqueeze(0).to(self.device)
         self.attr_model.eval()

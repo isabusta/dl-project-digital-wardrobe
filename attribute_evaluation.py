@@ -13,7 +13,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 if os.path.exists('/content/drive/MyDrive/'):
     CONFIG = {
         "crops_root":      "/content/crops",
-        "checkpoint_path": "/content/drive/MyDrive/Deepfashion2/checkpoints/attribute_efficientnet_best.pth",
+        "checkpoint_path": "/content/drive/MyDrive/Deepfashion2/checkpoints/exp_weighted_loss_30ep_best.pth",
         "output_path":     "/content/drive/MyDrive/Deepfashion2/checkpoints/attribute_eval_results.json",
     }
 else:

@@ -12,7 +12,8 @@ def train_step_attribute(model: torch.nn.Module,
                          dataloader: torch.utils.data.DataLoader,
                          optimizer: torch.optim.Optimizer,
                          device="mps",
-                         class_weights: dict = None):
+                         class_weights: dict = None,
+                         head_weights: dict = None):
 
     model.train()
 
@@ -29,7 +30,9 @@ def train_step_attribute(model: torch.nn.Module,
         outputs = model(X)
 
         # Sum CrossEntropyLoss across all 6 heads
+        # head_weights upweights weak heads (e.g. fabric, fit) to force focus on them
         loss = sum(
+            (head_weights[t] if head_weights else 1.0) *
             nn.CrossEntropyLoss(weight=class_weights[t] if class_weights else None)(outputs[t], targets[t])
             for t in TYPE_ORDER
         )
@@ -86,7 +89,8 @@ def train(model: torch.nn.Module,
           epochs: int = 10,
           scheduler: ExponentialLR = None,
           checkpoint_path: str = None,
-          class_weights: dict = None):
+          class_weights: dict = None,
+          head_weights: dict = None):
 
     results = {
         "train_loss": [],
@@ -102,7 +106,8 @@ def train(model: torch.nn.Module,
                                          dataloader=train_dataloader,
                                          optimizer=optimizer,
                                          device=device,
-                                         class_weights=class_weights)
+                                         class_weights=class_weights,
+                                         head_weights=head_weights)
 
         val_acc, acc_per_head = val_step_attribute(model=model,
                                                    dataloader=test_dataloader,

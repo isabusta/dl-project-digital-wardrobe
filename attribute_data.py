@@ -9,6 +9,15 @@ from PIL import Image
 TYPE_ORDER = ["texture", "sleeve", "length", "neckline", "fabric", "fit"]
 NUM_CLASSES_PER_TYPE = {"texture": 7, "sleeve": 3, "length": 3, "neckline": 4, "fabric": 6, "fit": 3}
 
+LABEL_NAMES = {
+    "texture":  ["floral", "graphic", "striped", "embroidered", "pleated", "solid", "lattice"],
+    "sleeve":   ["long sleeve", "short sleeve", "sleeveless"],
+    "length":   ["maxi", "mini", "knee length"],
+    "neckline": ["crew neck", "v-neck", "square neck", "notched"],
+    "fabric":   ["chiffon", "denim", "knit", "lace", "leather", "sequin"],
+    "fit":      ["tight", "conventional", "loose"],
+}
+
 
 class AttributeDataset(Dataset):
     def __init__(self, crops_root: str | Path, split: str, transform=None):
@@ -94,6 +103,28 @@ def build_dataloaders(
     }
 
 
+
+
+def compute_class_weights(crops_root: str | Path, device) -> dict:
+    import csv
+    from collections import Counter
+    counts = {t: Counter() for t in TYPE_ORDER}
+    total  = 0
+    with open(Path(crops_root) / "labels.csv", newline="") as f:
+        for row in csv.DictReader(f):
+            if row["split"] != "train":
+                continue
+            total += 1
+            for t in TYPE_ORDER:
+                counts[t][int(row[t])] += 1
+    weights = {}
+    for t in TYPE_ORDER:
+        n_cls = NUM_CLASSES_PER_TYPE[t]
+        w = torch.zeros(n_cls)
+        for c in range(n_cls):
+            w[c] = total / (n_cls * counts[t].get(c, 1))
+        weights[t] = w.to(device)
+    return weights
 
 
 if __name__ == "__main__":

@@ -3,6 +3,10 @@ from tqdm.auto import tqdm
 
 from tqdm.auto import tqdm
 from torch.optim.lr_scheduler import ExponentialLR
+import json
+from torchvision.ops import box_iou
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 
 
 def train_step_resnet(model: torch.nn.Module,

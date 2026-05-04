@@ -209,6 +209,7 @@ class Pipeline:
         all_coverage = 0.0
         all_precision = 0.0 
         all_images   = 0
+        all_extra_boxes = 0
 
         for img_idx, (images, targets) in enumerate(tqdm(test_loader, desc="Running Pipeline")):
             img_tensor = images[0].to(self.device)
@@ -249,6 +250,8 @@ class Pipeline:
                 all_coverage += scores['coverage']
                 all_precision += scores['precision']
                 all_images   += 1
+                extra_boxes = max(0, scores['detected'] - scores['total'])
+                all_extra_boxes += extra_boxes
 
             # print result
             if self.debug and img_idx == self.idx:
@@ -277,6 +280,7 @@ class Pipeline:
             print(f"Exact Match:  {all_exact}/{all_images}  = {all_exact/all_images:.2%}")
             print(f"Avg Coverage: {all_coverage/all_images:.2%}")
             print(f"Avg Precision: {all_precision/all_images:.2%}") 
+            print(f"Avg Extra Boxes: {all_extra_boxes/all_images:.2%}") 
 
             summary = {
                 "total_images":    all_images,
@@ -284,6 +288,7 @@ class Pipeline:
                 "exact_match_pct": round(all_exact    / all_images, 4) if all_images > 0 else 0,
                 "avg_coverage":    round(all_coverage / all_images, 4) if all_images > 0 else 0,
                 "avg_precision":   round(all_precision / all_images, 4) if all_images > 0 else 0,
+                "avg_extra_boxes": round(all_extra_boxes / all_images, 4) if all_images > 0 else 0,
             }
 
             # save eval JSON

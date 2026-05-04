@@ -134,75 +134,142 @@ Within each group, exactly one attribute is active per image, making each group 
 \section{Method}
 \label{sec:method}
 
+This section presents the methodological framework used for the fashion item recognition and attribute prediction task. The goal is to develop models that extract feature information from images and generate outputs consisting of item categories and visual attributes.
+
+Two deep learning approaches are investigated. First, a transfer learning strategy is used, where a pre-trained convolutional neural network is adapted to the fashion domain and fine-tuned for the classification tasks. Second, a custom convolutional neural network (CNN) is trained from scratch to learn visual representations without pre-trained knowledge. The goal is then to compare the performance which the different models have achieve. 
+
+In addition to the classification models, a pre-trained object detection model is used as a preprocessing step to localize fashion items within full images. The detector identifies bounding boxes around clothing items, which are then used to crop the corresponding regions. These cropped regions serve as inputs for the classification stage and for the task of attribute prediction.
+
+The classification is performed using both the custom CNN and the EfficientNet-based transfer learning models. This pipeline ensures that the classifier focuses on the relevant clothing regions rather than background information, improving the quality of feature learning and final predictions. The prediction of the attributes follows the same approach. 
+
+Both approaches are trained under comparable conditions for classification and attribute prediction. This setup enables a direct comparison of transfer learning and a custom-designed CNN in terms of performance and generalization ability.
+
 This section presents the methodic framework used to address the task of fashion item recognition and attribute prediction. The objective is, as to create and train models that extract semantic information from images and generate structured descriptions consisting of item categories and visual attributes.
 
 Rather than focusing on a single modeling strategy, this project investigates two different deep learning paradigms for visual understanding. The comparison aims to analyze how different principles of learning influence recognition performance and attribute prediction quality.
 
 Both approaches considered in this work are trained under comparable conditions and optimized to learn category recognition and attribute estimation.
 
+\subsection{Custom Convolutional Neural Network}
 
-\subsection{Problem Formulation}
+In addition to transfer learning, a custom convolutional neural network (CNN) was developed and trained from scratch for fashion item recognition. The model follows a residual learning paradigm inspired by ResNet architectures, enabling stable training of deeper networks through improved gradient propagation.
 
-Given an input image, the system first detects and segments individual garments using a ResNet-50-FPN backbone, producing a bounding box, category label, and segmentation mask for each item, and then predicts six attributes from the cropped garment region using a second ResNet-based classifier. Two alternative end-to-end approaches---a CNN+RNN and a Transformer---are also investigated for comparison.
-
-%Given an input image $x \in \mathbb{R}^{H \times W \times C}$, the goal is to detect each garment, predict a fashion category label $y_c$ together with a set of semantic attributes $y_a$. The learning problem can be formulated as
-
-%\[
-%f_\theta(x) = (y_c, y_a),
-%\]
-
-%where $f_\theta$ denotes a parameterized model trained on labeled fashion images. The task combines multi-class classification with multi-label prediction.
-
-
-\subsection{Approach 1: Convolutional and Sequential Modeling}
-
-The first approach follows a classical deep learning paradigm that separates learning of visual representations from generating structured prediction. Visual information patterns are extracted from images using convolution-based feature learning by applying Convolutional Neural Network to images. On the other hand, dependencies between semantic outputs¨and attributes are modeled through sequential reasoning, using Recurrent Neural Network.
-
-This paradigm assumes that relationships between fashion attributes can be interpreted as structured dependencies that benefit from ordered prediction processes. The approach therefore emphasizes hierarchical feature extraction combined with sequential modeling of semantic information.
-
-The detailed architectural realization of this approach is described in Section~\ref{sec:cnn_rnn_architecture}.
-
-\subsection{Approach 2: Transformer-Based Modeling}
-
-
-The second approach investigates transformer-based architectures as an alternative paradigm for visual understanding. Instead of modeling dependencies sequentially via recurrent neural networks, transformers employ self-attention mechanisms to learn relationships between visual elements and semantic concepts simultaneously.
-
-This perspective treats fashion understanding as a global reasoning problem, in which relevant visual information is dynamically weighted according to contextual relevance. By using transformers, the model can capture interactions between image regions and semantic attributes within a unified representation space, allowing for end-to-end learning of both category and attribute predictions.
-
-The detailed architectural implementation of this paradigm is presented in Section~\ref{sec:transformer_architecture}.
-
-\subsection{Comparison Strategy}
-
-The purpose of this study is to compare sequential modeling and attention-based modeling with respect to their suitability for fashion understanding tasks. The evaluation focuses on prediction accuracy, attribute modeling capability, robustness to real-world images, and overall generalization performance.
-
-By analyzing both paradigms under consistent experimental settings, the project aims to provide insight into how different representation learning principles affect downstream applications such as fashion analysis and recommendation.
-
-% ============================================================
-
-\subsection{Planned Architectures}
-\label{sec:architecture}
-
-In this section, we describe the intended architectures for the two approaches presented in the previous subsections. It is important to note that these descriptions are preliminary architecture designs, outlining how the models are expected to be structured. The actual implementations may differ based on experimental results, optimization considerations, and data-specific adjustments.
-
-\subsubsection{CNN + Recurrent Neural Network Architecture}
+\subsubsection{Model Architecture}
 \label{sec:cnn_rnn_architecture}
 
-For the first approach, the planned architecture consists of two main components: A convolutional feature extractor (CNN) and a sequential prediction module (RNN). The convolutional layers are intended to capture hierarchical visual features such as edges, textures, shapes, and patterns from the input images. These features will then be aggregated into a compact representation vector.
+\paragraph{Residual Blocks}
 
-The sequential module, likely based on recurrent neural networks such as LSTM or GRU layers, is designed to model dependencies between predicted attributes. This allows the network to take into account correlations between attributes (for example, certain colors often co-occurring with specific materials or style-attributes). Finally, fully connected layers will produce category predictions, while the recurrent module will generate multi-label attribute outputs.
+The network is built from residual blocks consisting of a convolutional transformation path and a skip connection. Each block contains three consecutive $3\times3$ convolutional layers with Batch Normalization and ReLU activation, where the final convolution is applied without activation before residual addition:
 
-The architecture is modular and interpretable, separating visual feature extraction from structured attribute prediction. However, exact layer sizes, number of filters, and other hyperparameters will be determined during the implementation and tuning phases.
+\[
+y = \mathrm{ReLU}(F(x) + S(x)).
+\]
 
-\subsubsection{Transformer-Based Architecture}
-\label{sec:transformer_architecture}
+If input and output dimensions differ, the skip connection uses a $1\times1$ convolution with Batch Normalization; otherwise, an identity mapping is applied.
 
-The second approach leverages transformer-based models for attention-driven global reasoning. The planned architecture processes input images by first optionally extracting preliminary feature maps through a convolutional backbone. These feature maps are then divided into sequences of visual tokens, which serve as input to transformer encoder layers.
+\paragraph{Network Structure}
 
-Self-attention mechanisms within the transformer are intended to model dependencies between image regions and between visual features and attributes. The output representations will be used for predicting both the category of the fashion item and the corresponding attributes through separate prediction heads.
+The architecture comprises nine residual blocks with progressively increasing channel depth and spatial downsampling:
 
-This architecture integrates global context modeling directly into the representation learning stage, in contrast to the sequential reasoning of the CNN + RNN approach. Layer configurations, number of attention heads, and tokenization strategies are considered design choices that will be finalized during actual implementation.
+\begin{itemize}
+    \item Block 1 initializes feature extraction.
+    \item Block 2 applies residual learning followed by max pooling ($224 \rightarrow 112$).
+    \item Blocks 3--4 expand channels to $2\times$ hidden units ($112 \rightarrow 56$).
+    \item Blocks 5--6 increase capacity to $4\times$ hidden units ($56 \rightarrow 28$).
+    \item Block 7 performs deep feature extraction ($8\times$ hidden units).
+    \item Block 8 expands to $16\times$ hidden units with pooling ($28 \rightarrow 14$).
+    \item Block 9 projects features to 320 channels and reduces resolution to $7\times7$.
+\end{itemize}
 
-\textbf{Summary.} All planned architectures are designed to handle the dual tasks of fashion category classification and attribute prediction. These descriptions serve as conceptual frameworks to guide future implementation and experimentation. Actual model configurations may evolve based on empirical results and practical considerations.
+\paragraph{Classification Head}
+
+The classification head converts feature maps into predictions using:
+
+\begin{itemize}
+    \item Adaptive average pooling to $1\times1$,
+    \item Flattening,
+    \item Dropout ($p=0.4$),
+    \item Fully connected output layer.
+\end{itemize}
+
+\paragraph{Design Rationale}
+
+Residual connections improve gradient flow, Batch Normalization stabilizes training, and progressive channel expansion enables hierarchical feature learning. Max pooling reduces computational cost, while adaptive pooling and dropout enhance robustness and generalization.
+
+Overall, the model combines deep residual feature extraction with a lightweight classifier for efficient fashion item classification.
+
+\subsection{Transfer Learning with Efficient Net B1 and Efficient Net B2}
+The next section describes briefly how the transfer learning approach was conducted to classify image labels and predict clothing attributes. 
+
+\subsubsection{Architecture Overview}
+
+For the transfer learning approach, EfficientNet-B1 and EfficientNet-B2 were used as backbone networks for feature extraction and classification. EfficientNet models are convolutional neural networks that apply a compound scaling strategy, jointly scaling depth, width, and input resolution to achieve high performance with strong parameter efficiency.
+
+Both architectures consist of a convolutional stem followed by multiple stages of MBConv blocks, which combine depthwise separable convolutions, squeeze-and-excitation modules, and residual connections to efficiently extract hierarchical visual features.
+
+EfficientNet-B2 is a scaled-up version of EfficientNet-B1, using increased depth, width, and input resolution, which allows for more expressive feature learning at the cost of slightly higher computational requirements.
+
+EfficientNet was chosen due to its strong balance between accuracy and efficiency. Compared to larger standard CNN architectures, EfficientNet models are relatively lightweight and computationally efficient, which enables faster training and fine-tuning while still maintaining stable classification performance.
+
+In this work, both models were initialized with pre-trained weights and fine-tuned for fashion item classification and attribute prediction. The original classification head was replaced with a task-specific fully connected layer matching the number of target categories and attributes.
+
+\subsection{Training Setup}
+
+This section describes the basic training configuration used for the fashion item classification and attribute prediction models. The same optimization strategy was applied to both the transfer learning models and the custom CNN architecture to ensure comparable experimental conditions.
+
+\paragraph{Image Size}
+All Images were scaled to a size of 224 x 224 pixels to allow a efficient training process. 
+
+\paragraph{Dataset Balancing}
+
+To the train the image classification models on DeepFashion2, a dedicated training sub set was constructed with an approximately uniform class distribution. For each clothing category, a similar number of images was selected in order to reduce class imbalance. This balancing strategy prevents the model from biasing predictions toward frequently occurring classes and encourages equal learning across all categories. As a result, the classifier learns more representative decision boundaries and improves overall generalization performance.
+
+\paragraph{Optimizer}
+
+Model parameters were optimized using the Adam optimizer. Adam combines the advantages of adaptive learning rate methods and momentum-based optimization by maintaining running estimates of first and second moments of the gradients. This allows stable and efficient convergence, particularly for deep neural networks with large parameter spaces.
+
+\paragraph{Learning Rate and Learning Rate Scheduler}
+
+To improve convergence during training, a learning rate scheduler with an exponential decay factor $\gamma = 0.95$ was employed. Initially a learning rate of $0.001$ was initialized. After each epoch, the learning rate was multiplied by the decay factor, gradually reducing the update step size. This strategy enables faster learning in early training stages while allowing finer parameter adjustments in later epochs.
+
+\paragraph{Loss Function}
+The models were trained using the CrossEntropyLoss function, which is commonly applied to multi-class classification problems. Cross-entropy measures the difference between predicted class probabilities and ground-truth labels, encouraging the model to assign high probability to the correct class.
+
+\paragraph{Training Duration}
+
+The number of training epochs varied between 5 and 20 depending on the experiment and model configuration. Shorter training runs were used for rapid experimentation and hyperparameter validation, while longer training schedules allowed the models to achieve improved convergence and higher classification performance.
+
+\subsection{Implementation Details}
+\label{sec:implementation_details}
+
+This section describes practical implementation decisions that influenced the training procedure and performance of both modeling approaches: the custom CNN architecture and the transfer learning models based on EfficientNet-B1 and EfficientNet-B2. To ensure a fair comparison, identical preprocessing, augmentation, and regularization strategies were applied whenever possible.
+
+\paragraph{Data Augmentation}
+
+Data augmentation was employed during training to increase data variability and reduce overfitting for all models. Both the custom CNN and the transfer learning approaches are prone to memorizing training samples when trained on fashion datasets with visually similar items. Augmentation therefore served as an important regularization technique.
+
+Moderate geometric and photometric transformations were applied, including random horizontal flipping, small rotations, and slight brightness and contrast adjustments. These transformations simulate realistic variations in fashion images such as pose changes, illumination differences, and viewpoint variations while preserving semantic garment information.
+
+A key practical consideration was the strength of augmentation. Strong augmentations can significantly increase task difficulty and hinder learning, particularly during fine-tuning of pre-trained networks such as EfficientNet-B1 and EfficientNet-B2. Therefore, augmentation parameters were carefully selected to maintain a balance between improving robustness and allowing efficient feature learning.
+
+\paragraph{Transfer Learning Strategy (EfficientNet-B1 and EfficientNet-B2)}
+
+For the EfficientNet-based models, a staged fine-tuning strategy was applied. Initially, the pre-trained backbone networks were frozen, and only the newly added classification head was trained. This step allowed the classifier to adapt to the fashion-specific label space while preserving the general visual features learned during pretraining.
+
+In a second stage, fine-tuning was gradually extended to deeper layers of the network. Instead of updating all layers simultaneously, parts of the backbone were progressively unfrozen and jointly trained with the classifier. This step-wise fine-tuning strategy improved stability during training and helped the model adapt more effectively to domain-specific patterns in fashion images.
+
+Empirically, this gradual unfreezing strategy led to improved test accuracy compared to training only the classifier head, as it allowed the model to refine higher-level feature representations without disrupting the already well-generalized low-level features.
+
+\paragraph{Influence on Overfitting and Accuracy}
+
+Experiments revealed a trade-off between augmentation and classification accuracy. Training without augmentation occasionally resulted in higher test accuracy values. However, models trained without augmentation showed a stronger tendency toward overfitting, characterized by rapid optimization on the training data and reduced generalization stability.
+
+When augmentation was applied, overfitting effects were reduced and validation performance became more consistent across training epochs. Although peak accuracy sometimes decreased slightly, the models learned more robust and invariant feature representations. This behavior was observed consistently for both the custom CNN and the transfer learning models.
+
+\paragraph{Regularization Techniques}
+
+Additional regularization was introduced through dropout layers in the classification head of all classification models, helping to prevent overfitting during training. Batch normalization layers within the custom CNN stabilized gradient flow and improved convergence, while the pre-trained EfficientNet architectures inherently benefited from normalization and regularization mechanisms learned during large-scale pretraining.
+
 % Romano: motivate problem, formal description, evaluation criteria
 % Viola: Method 2.0 
 \section{Method}

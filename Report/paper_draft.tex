@@ -216,20 +216,15 @@ All Images were scaled to a size of 224 x 224 pixels to allow a efficient traini
 
 To the train the image classification models on DeepFashion2, a dedicated training sub set was constructed with an approximately uniform class distribution. For each clothing category, a similar number of images was selected in order to reduce class imbalance. This balancing strategy prevents the model from biasing predictions toward frequently occurring classes and encourages equal learning across all categories. As a result, the classifier learns more representative decision boundaries and improves overall generalization performance.
 
-\paragraph{Optimizer}
+\subsubsection{Hyperparameters}
 
-Model parameters were optimized using the Adam optimizer. Adam combines the advantages of adaptive learning rate methods and momentum-based optimization by maintaining running estimates of first and second moments of the gradients. This allows stable and efficient convergence, particularly for deep neural networks with large parameter spaces.
+All models were optimized using adaptive gradient-based methods. The classification networks were trained with the Adam optimizer, while the Faster R-CNN ResNet50 FPN v2 detector used AdamW with a learning rate of $1\times10^{-4}$. These optimizers combine adaptive learning rates with momentum estimation, enabling stable convergence for deep neural networks.
 
-\paragraph{Learning Rate and Learning Rate Scheduler}
+For classification training, an exponentially decaying learning rate schedule ($\gamma = 0.95$) was applied. Training started with a learning rate of $0.001$, which was reduced after each epoch to allow rapid early learning followed by finer parameter updates. The Faster R-CNN ResNet50 FPN v2 model was fine-tuned on the DeepFashion2 dataset containing 13 clothing categories and one background class for 10 epochs using 3000 training images. Training progress was monitored using the total loss and box regression loss, reflecting both classification and bounding box refinement quality.
 
-To improve convergence during training, a learning rate scheduler with an exponential decay factor $\gamma = 0.95$ was employed. Initially a learning rate of $0.001$ was initialized. After each epoch, the learning rate was multiplied by the decay factor, gradually reducing the update step size. This strategy enables faster learning in early training stages while allowing finer parameter adjustments in later epochs.
+Classification models were trained using the CrossEntropyLoss function for multi-class prediction, while the detection model employed the standard Faster R-CNN objective combining classification and bounding box regression losses.
 
-\paragraph{Loss Function}
-The models were trained using the CrossEntropyLoss function, which is commonly applied to multi-class classification problems. Cross-entropy measures the difference between predicted class probabilities and ground-truth labels, encouraging the model to assign high probability to the correct class.
-
-\paragraph{Training Duration}
-
-The number of training epochs varied between 5 and 20 depending on the experiment and model configuration. Shorter training runs were used for rapid experimentation and hyperparameter validation, while longer training schedules allowed the models to achieve improved convergence and higher classification performance.
+The number of training epochs varied between 5 and 20 depending on the experiment and model configuration. Shorter runs enabled rapid hyperparameter exploration, whereas longer training schedules improved convergence and overall classification and box prediction performance.
 
 \subsection{Implementation Details}
 \label{sec:implementation_details}
@@ -262,9 +257,6 @@ When augmentation was applied, overfitting effects were reduced and validation p
 
 Additional regularization was introduced through dropout layers in the classification head of all classification models, helping to prevent overfitting during training. Batch normalization layers within the custom CNN stabilized gradient flow and improved convergence, while the pre-trained EfficientNet architectures inherently benefited from normalization and regularization mechanisms learned during large-scale pretraining.
 
-% Romano: motivate problem, formal description, evaluation criteria
-% Viola: Method 2.0 
-\section{Method}
 \subsection{Object Detection}
 For object detection, a Faster R-CNN ResNet50 FPN v2 model was used, which was pre-trained on the COCO dataset and subsequently fine-tuned on DeepFashion2.  
 The model architecture combines a convolutional backbone for feature map extraction with a Region Proposal Network (RPN), which generates multiple anchor boxes at each spatial location on the feature maps. For each anchor box, the RPN predicts whether it corresponds to an object (foreground) or background.  

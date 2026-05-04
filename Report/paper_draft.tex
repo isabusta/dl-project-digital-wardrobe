@@ -234,11 +234,9 @@ This section describes practical implementation decisions that influenced the tr
 
 \paragraph{Data Augmentation}
 
-Data augmentation was employed during training to increase data variability and reduce overfitting for all models. Both the custom CNN and the transfer learning approaches are prone to memorizing training samples when trained on fashion datasets with visually similar items. Augmentation therefore served as an important regularization technique.
+Data augmentation was applied during training to increase data variability and reduce overfitting for both the custom CNN and transfer learning models. Since fashion datasets often contain visually similar items, augmentation acted as a key regularization technique.
 
-Moderate geometric and photometric transformations were applied, including random horizontal flipping, small rotations, and slight brightness and contrast adjustments. These transformations simulate realistic variations in fashion images such as pose changes, illumination differences, and viewpoint variations while preserving semantic garment information.
-
-A key practical consideration was the strength of augmentation. Strong augmentations can significantly increase task difficulty and hinder learning, particularly during fine-tuning of pre-trained networks such as EfficientNet-B1 and EfficientNet-B2. Therefore, augmentation parameters were carefully selected to maintain a balance between improving robustness and allowing efficient feature learning.
+Moderate transformations such as random horizontal flips, small rotations, and slight brightness and contrast changes were used to simulate realistic variations in pose, lighting, and viewpoint while preserving semantic information. Care was taken to avoid overly strong augmentations, as these can hinder learning, especially during fine-tuning of pretrained EfficientNet-B1 and EfficientNet-B2 models.
 
 \paragraph{Transfer Learning Strategy (EfficientNet-B1 and EfficientNet-B2)}
 

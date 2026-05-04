@@ -144,7 +144,7 @@ Both approaches considered in this work are trained under comparable conditions 
 
 \subsection{Custom Convolutional Neural Network}
 
-In addition to transfer learning, a custom convolutional neural network (CNN) was developed and trained from scratch for fashion item recognition. The model follows a residual learning paradigm inspired by ResNet architectures, enabling stable training of deeper networks through improved gradient propagation.
+In a first approach a custom convolutional neural network (CNN) was developed and trained from scratch for fashion item recognition. The model follows a residual learning paradigm inspired by ResNet architectures, enabling stable training of deeper networks through improved gradient propagation.
 
 \subsubsection{Model Architecture}
 \label{sec:cnn_rnn_architecture}
@@ -190,10 +190,11 @@ Residual connections improve gradient flow, Batch Normalization stabilizes train
 
 Overall, the model combines deep residual feature extraction with a lightweight classifier for efficient fashion item classification.
 
-\subsection{Transfer Learning with Efficient Net B1 and Efficient Net B2}
-The next section describes briefly how the transfer learning approach was conducted to classify image labels and predict clothing attributes. 
+\subsection{Transfer Learning with EfficientNet B1 and EfficientNet B2}
 
-\subsubsection{Architecture Overview}
+Since the training results obtained with the custom CNN were not fully satisfactory, a transfer learning approach was explored. Instead of training a model from scratch, pretrained EfficientNet B1 and EfficientNet B2 architectures were selected as backbone networks for image classification and clothing attribute prediction.
+
+\subsubsection{EfficientNet B1 and EfficientNet B2 - Architecture Overview}
 
 For the transfer learning approach, EfficientNet-B1 and EfficientNet-B2 were used as backbone networks for feature extraction and classification. EfficientNet models are convolutional neural networks that apply a compound scaling strategy, jointly scaling depth, width, and input resolution to achieve high performance with strong parameter efficiency.
 
@@ -216,7 +217,7 @@ All Images were scaled to a size of 224 x 224 pixels to allow a efficient traini
 
 For training the image classification models on DeepFashion2, training sets were constructed with an approximately uniform class distribution. A similar number of images was selected for each clothing category to reduce class imbalance. This strategy prevents bias toward frequently occurring classes and supports balanced learning across categories, leading to more accurate decision boundaries and improved generalization performance.
 
-\subsubsection{Hyperparameters}
+\paragraph{Hyperparameters}
 
 All models were optimized using adaptive gradient-based methods. The classification networks were trained with the Adam optimizer, while the Faster R-CNN ResNet50 FPN v2 detector used AdamW with a learning rate of $1\times10^{-4}$. These optimizers combine adaptive learning rates with momentum estimation, enabling stable convergence for deep neural networks.
 

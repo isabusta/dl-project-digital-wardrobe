@@ -26,7 +26,6 @@
 
 \maketitle
 
-
 \section{Introduction}
 
 The automatic understanding of visual content has become one of the central challenges in modern computer vision and computer vision applications. In the current document we will describe a computer vision problem in the field of fashion industry, which we aim to solve by using deep learning methods.
@@ -66,43 +65,15 @@ The objective of the project is to design and implement deep learning models whi
 
 
 \section{Dataset}
+We train and evaluate our models using the DeepFashion2 dataset \cite{ge2019deepfashion2}, which contains 100K images and 801K clothing items across 13 categories. The dataset includes both commercial images captured in controlled environments and consumer images taken under real-world conditions. Each clothing item is annotated with a bounding box, category label, and pixel-level segmentation mask. As DeepFashion2 does not provide attribute annotations beyond garment categories, attribute prediction is performed using a subset of the Category and Attribute Prediction Benchmark from DeepFashion \cite{liu2016deepfashion}.
 
-We train and evaluate our models using the DeepFashion2 dataset \cite{ge2019deepfashion2},
-which contains 100K images and 801K clothing items across 13 categories.
-
-The dataset includes commercial images taken in controlled environments and
-consumer images captured in real-world conditions. Each clothing item is annotated
-with a bounding box, category label, and pixel-level segmentation mask.
-
-Our project focuses on three steps: Object segmentation to detect fashion items in an given image. The next step is classification of the category labels for each item. And the last step is the prediction of the clothing attributes.
-
-\subsection{Attribute Dataset}
-\label{sec:attribute_dataset}
-
-Deepfashion2 does not include attribute labels beyond the 13 garment categories. To enable attribute prediction, we use a subset of the Category and Attribute Prediction Benchmark from DeepFashion~\cite{liu2016deepfashion}.
-
-This subset contains 20{,}000 images annotated with 26 attributes organized into six mutually exclusive groups:
-\begin{itemize}
-    \item \textbf{Pattern} (7): floral, graphic, striped, embroidered, pleated, solid, lattice
-    \item \textbf{Sleeve length} (3): long sleeve, short sleeve, sleeveless
-    \item \textbf{Garment length} (3): maxi, mini, no dress
-    \item \textbf{Neckline} (4): crew, v-neckline, square, no neckline
-    \item \textbf{Fabric} (6): denim, chiffon, cotton, leather, faux, knit
-    \item \textbf{Fit} (3): tight, loose, conventional
-\end{itemize}
-
-Within each group, exactly one attribute is active per image, making each group a single-label classification problem. DeepFashion2 trains the detection and segmentation stage, while the DeepFashion subset trains the attribute classifier.
+The selected subset contains 20{,}000 images annotated with 26 attributes grouped into six mutually exclusive categories describing pattern, sleeve length, garment length, neckline, fabric, and fit. Within each group, exactly one attribute is active per image, resulting in six independent single-label classification tasks. DeepFashion2 is used to train the detection and segmentation stage, while the DeepFashion subset is used for attribute classification.
 
 \section{Method}
 \label{sec:method}
 
-This section describes the methodological framework for object detection, fashion item classification, and attribute prediction. The objective is to develop models that extract relevant visual features from images and generate predictions consisting of clothing categories and associated visual attributes.
-
-Two deep learning approaches are investigated. First, a transfer learning strategy is applied using pre-trained neural networks to detect fashion objects, classify clothing items, and predict their attributes. Second, a custom convolutional neural network (CNN) is trained from scratch to learn visual representations without relying on pre-trained knowledge. The performance of both approaches is subsequently compared.
-
-Object detection is used as a preprocessing step to localize clothing items within each image. The cropped regions are then passed to the classification and attribute prediction models. This pipeline ensures that the models focus on relevant garment areas rather than background information, improving feature learning and prediction quality.
-
-Both approaches are trained under comparable conditions, enabling a fair evaluation of transfer learning versus a custom-designed CNN in terms of accuracy, robustness, and generalization capability.
+This section describes the methodological framework for object detection, fashion item classification, and attribute prediction. Two deep learning approaches are investigated. 
+First, a custom convolutional neural network (CNN) is developed and trained from scratch to learn visual representations without relying on pre-trained knowledge. Second, a transfer learning strategy is applied using pre-trained neural networks to detect fashion objects, classify clothing items, and predict their attributes. Object detection is used as a preprocessing step to localize clothing items within each image. The cropped regions are then passed to the classification and attribute prediction models. This pipeline ensures that the models focus on relevant garment areas rather than background information, improving feature learning and prediction quality.
 
 \subsection{Object Detection with Faster R-CNN ResNet50 FPN }
 For object detection, a Faster R-CNN ResNet50 FPN v2 model was used, which was pre-trained on the COCO dataset and subsequently fine-tuned on DeepFashion2.  
@@ -151,11 +122,8 @@ The classification head converts feature maps into predictions using:
     \item Fully connected output layer.
 \end{itemize}
 
-\paragraph{Design Rationale}
-
 Residual connections improve gradient flow, Batch Normalization stabilizes training, and progressive channel expansion enables hierarchical feature learning. Max pooling reduces computational cost, while adaptive pooling and dropout enhance robustness and generalization.
 
-Overall, the model combines deep residual feature extraction with a lightweight classifier for efficient fashion item classification.
 
 \subsection{Classification and Attribut Prediction with EfficientNet B1 and EfficientNet B2}
 
@@ -163,15 +131,7 @@ Since the training results obtained with the custom CNN were not fully satisfact
 
 \subsubsection{EfficientNet B1 and EfficientNet B2 - Architecture Overview}
 
-For the transfer learning approach, EfficientNet-B1 and EfficientNet-B2 were used as backbone networks for feature extraction and classification. EfficientNet models are convolutional neural networks that apply a compound scaling strategy, jointly scaling depth, width, and input resolution to achieve high performance with strong parameter efficiency.
-
-Both architectures consist of a convolutional stem followed by multiple stages of MBConv blocks, which combine depthwise separable convolutions, squeeze-and-excitation modules, and residual connections to efficiently extract hierarchical visual features.
-
-EfficientNet-B2 is a scaled-up version of EfficientNet-B1, using increased depth, width, and input resolution, which allows for more expressive feature learning at the cost of slightly higher computational requirements.
-
-EfficientNet was chosen due to its strong balance between accuracy and efficiency. Compared to larger standard CNN architectures, EfficientNet models are relatively lightweight and computationally efficient, which enables faster training and fine-tuning while still maintaining stable classification performance.
-
-In this work, both models were initialized with pre-trained weights and fine-tuned for fashion item classification and attribute prediction. The original classification head was replaced with a task-specific fully connected layer matching the number of target categories and attributes.
+EfficientNet-B1 and EfficientNet-B2 were used as backbone networks for transfer learning-based feature extraction and classification. EfficientNet models apply compound scaling, jointly adjusting network depth, width, and input resolution to achieve high accuracy with strong parameter efficiency. Both architectures consist of a convolutional stem followed by stacked MBConv blocks combining depthwise separable convolutions, squeeze-and-excitation modules, and residual connections for efficient hierarchical feature extraction. EfficientNet-B2 represents a scaled-up variant of EfficientNet-B1, providing more expressive feature learning at slightly increased computational cost. Both models were initialized with pre-trained weights and fine-tuned for fashion item classification and attribute prediction by replacing the original classification head with a task-specific fully connected layer.
 
 \subsection{Training Setup}
 
@@ -186,9 +146,9 @@ For training the image classification models on DeepFashion2, training sets were
 
 \paragraph{Hyperparameters}
 
-All models were optimized using adaptive gradient-based methods. The classification networks were trained with the Adam optimizer, while the Faster R-CNN ResNet50 FPN v2 detector used AdamW with a learning rate of $1\times10^{-4}$. These optimizers combine adaptive learning rates with momentum estimation, enabling stable convergence for deep neural networks.
+All models were optimized using adaptive gradient-based methods. The classification networks (EfficientNet B1, B2, and the custom CNN) were trained with the Adam optimizer. The Faster R-CNN ResNet50 FPN v2 was also trained using Adam with a learning rate of $1\times10^{-4}$, combining adaptive learning rates with momentum estimation for stable convergence.
 
-For classification training, an exponentially decaying learning rate schedule ($\gamma = 0.95$) was applied. Training started with a learning rate of $0.001$, which was reduced after each epoch to allow rapid early learning followed by finer parameter updates. The Faster R-CNN ResNet50 FPN v2 model was fine-tuned on the DeepFashion2 dataset containing 13 clothing categories and one background class for 10 epochs using 3000 training images. Training progress was monitored using the total loss and box regression loss, reflecting both classification and bounding box refinement quality.
+For classification training, an exponentially decaying learning rate schedule ($\gamma = 0.95$) was applied. Training started with a learning rate of $0.001$, reduced after each epoch to enable rapid initial learning followed by finer parameter updates. Additionally a weight decay of $0.0001$ was added. The Faster R-CNN ResNet50 FPN v2 model was fine-tuned on the DeepFashion2 dataset containing 13 clothing categories and one background class for 10 epochs using 3000 training images. Training progress was monitored using total loss and box regression loss, reflecting classification and bounding box refinement quality.
 
 Classification models were trained using the CrossEntropyLoss function for multi-class prediction, while the detection model employed the standard Faster R-CNN objective combining classification and bounding box regression losses.
 
@@ -203,7 +163,7 @@ This section describes practical implementation decisions that influenced the tr
 
 Data augmentation was applied during training to increase data variability and reduce overfitting for both the custom CNN and transfer learning models. Since fashion datasets often contain visually similar items, augmentation acted as a key regularization technique.
 
-Moderate transformations such as random horizontal flips, small rotations, and slight brightness and contrast changes were used to simulate realistic variations in pose, lighting, and viewpoint while preserving semantic information. Care was taken to avoid overly strong augmentations, as these can hinder learning, especially during fine-tuning of pretrained EfficientNet-B1 and EfficientNet-B2 models.
+Moderate transformations such as random horizontal flips, small rotations, and slight brightness and contrast changes were used to simulate realistic variations in pose, lighting, and viewpoint while preserving semantic information. Care was taken to avoid overly strong augmentations, as these can prevent learning and fine-tuning of pretrained Models.
 
 \paragraph{Transfer Learning Strategy (EfficientNet-B1 and EfficientNet-B2)}
 
@@ -252,14 +212,11 @@ Two boxes are considered a match if their overlap is at least 75$\%$. This stric
 \label{fig:train_res_obj_detection}
 \end{figure}
 
-\subsection{Classification}
-\subsection{Attribute Prediction}
-
-\section{Pipeline}
+\section{Results}
 The pipeline combines object detection, classification, and attribute prediction.  
 
-\subsubsection{Object Detection}
-The Faster R-CNN model outputs all detected bounding boxes together with a confidence score. Boxes with a score below a predefined threshold (0.5) are first removed. Subsequently, Non-Maximum Suppression (NMS) is applied class-wise: if two boxes of the same label overlap significantly (IoU > 0.5), only the box with the higher score is retained. This prevents multiple detections of the same clothing item.  
+\subsubsection{Object Detection and Classification}
+The Faster R-CNN model outputs all detected bounding boxes together with a confidence score. Boxes with a score below a predefined threshold (0.5) are first removed. Subsequently, Non-Maximum Suppression (NMS) is applied class-wise: if two boxes of the same label overlap significantly ($IoU > 0.5$), only the box with the higher score is retained. This prevents multiple detections of the same clothing item.  
 Figure \ref{fig:boxes_before_filtering} shows the predicted boxes before filtering, and Figure \ref{fig:boxes_after_filtering} shows the results after filtering.
 
 \begin{figure}[h!]
@@ -283,10 +240,10 @@ Figure \ref{fig:boxes_before_filtering} shows the predicted boxes before filteri
     \label{fig:boxes_filtering_comparison}
 \end{figure}
 
-\subsubsection{Crop and Classification}
 Each remaining bounding box is cropped from the original image and passed to a classification model, which assigns the corresponding clothing item to one of 13 categories.
 
-\subsection{Pipeline Evaluation}
+
+\subsection{Evaluation}
 
 The test set consists of 5000 images from DeepFashion2. Since ground truth annotations are available only for bounding boxes and categories, the evaluation is limited to detection and classification performance. The goal is to measure how well the pipeline detects the correct number of garments and classifies them correctly. Three metrics are used:
 
@@ -317,4 +274,3 @@ Res CNN & 21.48 \% & 52.97 \% & 80.90 \% & 0.46 \\ \hline
 \bibliography{references}
 
 \end{document}
-

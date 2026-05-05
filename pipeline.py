@@ -192,7 +192,7 @@ class Pipeline:
             "precision":   round(precision, 4),  # penalty for extra boxes
         }
 
-    def run(self, test_data_path, output_dir='predictions'):
+    def run(self, test_data_path, output_dir='predictions', json_res = 'eval_results.json'):
         """
         Runs pipeline with ground truth to evaluate models and accuracy.
         Saves predictions as JSON in the same format as GT annotations.
@@ -292,6 +292,6 @@ class Pipeline:
             }
 
             # save eval JSON
-            eval_path = os.path.join(output_dir, 'eval_results.json')
+            eval_path = os.path.join(output_dir, json_res)
             with open(eval_path, 'w') as f:
                 json.dump(summary, f, indent=4)

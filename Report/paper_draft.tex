@@ -35,24 +35,15 @@ In particular, the fashion industry increasingly relies on intelligent systems c
 The visual analysis and classification of clothing has gained increasing importance in the context of e-commerce and social media ~\cite{wang_2018, alamsyah_2019}.
 A comprehensive analysis of clothing involves several sub-tasks, including landmark detection, classification, and semantic segmentation in real-world scenes.
 
-\textbf{Related Work.}
-A classical machine learning approach is presented in ~\cite{bossard_2012}.
-The work describes a pipeline for clothing classification based on learning visual attributes. These attributes are used to represent the visual properties of garments.
-For classification, a Random Forest is employed, combined with multiple Support Vector Machines (SVMs) for attribute learning.
+\paragraph{Related Work.}
+A classical machine learning approach is presented in ~\cite{bossard_2012}, describing a clothing classification pipeline based on visual attributes learned using Random Forests and Support Vector Machines (SVMs).
 
-More recent work mainly focuses on CNN-based methods ~\cite{alamsyah_2019, maryamah_2023, wang_2018}. These studies use different datasets.
-While ~\cite{bossard_2012} focuses on upper-body clothing, ~\cite{alamsyah_2019} investigates headwear and accessories using Instagram images.
-~\cite{maryamah_2023} utilizes data collected from five official websites of well-known fashion brands.
-These approaches achieve strong performance in tasks such as classification, retrieval, and landmark detection, particularly on large datasets ~\cite{wang_2018, maryamah_2023}.
-However, ~\cite{wang_2018} highlight the limitation that many models do not incorporate domain-specific knowledge.
-To address this issue, ~\cite{wang_2018} propose a knowledge-guided fashion network that jointly performs landmark localization and classification.
-A key component is the Fashion Grammar Model, which combines a Bidirectional Convolutional Recurrent Neural Network (BCRNN) with domain-specific knowledge.
-Grammar models originate from the field of computer vision and enable the modeling of semantic relationships between objects and humans, as well as the structured decomposition of scenes.
-Additionally, category-guided and landmark-aware attention mechanisms are employed.
-The results show that incorporating domain-specific knowledge leads to better performance compared to isolated neural network approaches.
+More recent work focuses on CNN-based methods ~\cite{alamsyah_2019, maryamah_2023, wang_2018} applied to different datasets. While ~\cite{bossard_2012} targets upper-body clothing, ~\cite{alamsyah_2019} studies headwear and accessories from Instagram images, and ~\cite{maryamah_2023} uses data from fashion brand websites. These approaches achieve strong performance in classification, retrieval, and landmark detection, particularly on large datasets ~\cite{wang_2018, maryamah_2023}.
+
+However, ~\cite{wang_2018} highlight that many models lack domain-specific knowledge. To address this, they propose a knowledge-guided fashion network that jointly performs landmark localization and classification. A key component is the Fashion Grammar Model, which combines a Bidirectional Convolutional Recurrent Neural Network (BCRNN) with domain knowledge to model semantic relationships and structured scene representations. The results show that incorporating domain-specific knowledge improves performance compared to isolated neural network approaches.
 
 
-\textbf{Problem Definition.}
+\paragraph{Problem Definition.}
 In this project, we address the task of \emph{fashion item recognition and attribute prediction} from images. Given an input image containing one or multiple fashion products, the goal can be described as the following three steps:
 \begin{enumerate}
     \item detect and segment: the fashion items present in the image,
@@ -302,11 +293,28 @@ The test set consists of 5000 images from DeepFashion2. Since ground truth annot
 \begin{itemize}
     \item \textbf{Exact Match} 1 if the number of predicted boxes matches the ground truth and all predicted labels are contained in the ground truth labels, otherwise 0.
     \item \textbf{Coverage} Fraction of ground truth labels covered by predictions: $\frac{\text{matched labels}}{\text{GT labels}}$.
-    \item \textbf{Precision} Penalty term for over-prediction: $
-    \frac{\text{GT labels}}{\text{predicted boxes}}$  (only applied when predictions > GT, otherwise 1.0).
+    \item \textbf{Precision} Precision measures over-prediction by computing the ratio of ground-truth objects to predicted bounding boxes, with values below 1.0 indicating excess detections.
+    \item \textbf{Avg Extra Boxes} Average number of additional bounding boxes predicted per image, reflecting the absolute amount of over-prediction.
+
+Table \ref{tab:pipeline_eval} shows the pipeline evaluation results for different classification models, while object detection is kept fixed using Faster R-CNN ResNet50 FPN v2.
+
 \end{itemize}
+\begin{table}[h!]
+\centering
+\caption{Pipeline evaluation results for different classification models}
+\label{tab:pipeline_eval}
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+Model & Avg Exact Match & Avg Coverage & Avg Precision & Avg Extra Boxes \\ \hline
+Efficient Net B1 Baseline & 21.36 \% & 51.19 \% & 80.90 \% & 0.46 \\ \hline
+Efficient Net B1 Fine Tuned & 32.00 \% & 68.51 \% & 80.90 \% & 0.46 \\ \hline
+Efficient Net B1 Fine Tuned (DA) & 33.42 \% & 69.62 \% & 80.80 \% & 0.46 \\ \hline
+Res CNN & 21.48 \% & 52.97 \% & 80.90 \% & 0.46 \\ \hline
+\end{tabular}
+\end{table}
 
 \bibliographystyle{plain}
 \bibliography{references}
 
 \end{document}
+

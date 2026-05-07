@@ -64,13 +64,10 @@ single-label classification task.
 
 \section{Method}
 \label{sec:method}
-This section describes the methodological framework for object detection, fashion item classification, and attribute prediction. Two deep learning approaches are investigated.
-First, a custom convolutional neural network (CNN) is developed and trained from scratch to learn visual representations without relying on pre-trained knowledge. Second, a transfer learning strategy is applied using pre-trained neural networks to detect fashion objects, classify clothing items, and predict their attributes. Object detection is used as a preprocessing step to localize clothing items within each image. The cropped regions are then passed to the classification and attribute prediction models. This pipeline ensures that the models focus on relevant garment areas rather than background information, improving feature learning and prediction quality.
+We design a three-stage pipeline for detection, classification, and attribute prediction. Object detection serves as a preprocessing step to localize clothing items within each image; the cropped regions are then passed to the classification and attribute prediction models, ensuring each model focuses on relevant garment areas rather than background information.
 
 \subsection{Model Architecture}
-Two approaches were explored for category classification: a custom CNN trained from scratch
-  and transfer learning with EfficientNet. Table~\ref{tab:models} summarizes all models
-  investigated.
+Each stage of the pipeline uses a dedicated model. For object detection, a pre-trained Faster R-CNN is fine-tuned on DeepFashion2. For category classification, two approaches were explored: a custom CNN trained from scratch and transfer learning with EfficientNet. For attribute prediction, a multi-head EfficientNet variant is used. Table~\ref{tab:models} summarizes all models investigated.
 
 \begin{table}[H]
 \centering
@@ -113,8 +110,6 @@ Two boxes are considered a match if their overlap is at least 75$\%$. This stric
 
 \subsubsection{Category Classification}
 
-Two approaches were explored for category classification.
-
 \paragraph{Custom CNN}
 
 In a first approach a custom convolutional neural network (CNN) was developed and trained from scratch for fashion item recognition. The model follows a residual learning paradigm inspired by ResNet architectures, enabling stable training of deeper networks through improved gradient propagation.
@@ -155,10 +150,7 @@ with an identity mapping, and six fully connected heads were attached
 in parallel, each producing logits over the classes of one attribute
 group: texture (7), sleeve length (3), garment length (3), neckline
 (4), fabric (6), and fit (3). Together, these heads cover all 26
-dimensions of the DeepFashion attribute vector. Dropout ($p=0.3$) was
-applied between the backbone and the heads for the EfficientNet
-variants only, while ResNet-50 was regularized solely through weight
-decay.
+dimensions of the DeepFashion attribute vector.
 \subsection{Training Setup}
 
 Each stage uses a different dataset and partition, summarized in Table~\ref{tab:datasets}. For training the image classification models on DeepFashion2, training sets were constructed with an approximately uniform class distribution to reduce class imbalance. All images were scaled to $224\times224$ pixels. For attribute prediction, individual garment crops were first extracted from each image using the provided ground-truth bounding boxes. Training crops were augmented with random horizontal flips ($p=0.5$) and color jitter (brightness, contrast, and saturation $\pm 0.2$); validation and test crops were resized and normalized only.
@@ -231,7 +223,7 @@ EfficientNet-B0 weighted (selected)  &  4.0\,M & 30 & 0.8502 \\
 
 
 \section{Results}
-The pipeline combines object detection, category classification, and attribute prediction. Qualitative examples of the detection filtering step are shown in Appendix~\ref{app:figures}.
+This section reports quantitative results for each stage of the pipeline and closes with a qualitative end-to-end evaluation. Qualitative examples of the detection filtering step are shown in Appendix~\ref{app:figures}.
 
 \subsection{Object Detection}
 The Faster R-CNN model outputs all detected bounding boxes together with a confidence score. Boxes with a score below a predefined threshold (0.5) are first removed. Subsequently, Non-Maximum Suppression (NMS) is applied class-wise: if two boxes of the same label overlap significantly ($\text{IoU} > 0.5$), only the box with the higher score is retained. This prevents multiple detections of the same clothing item. Figure~\ref{fig:boxes_filtering_comparison} (Appendix~\ref{app:figures}) illustrates the effect of filtering on an example image. Each remaining bounding box is cropped and passed to the classification model.

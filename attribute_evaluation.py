@@ -3,6 +3,7 @@ import json
 import torch
 import matplotlib.pyplot as plt
 from PIL import Image
+PILImage = Image
 from sklearn.metrics import classification_report
 
 from attribute_data import TYPE_ORDER, LABEL_NAMES, build_dataloaders
@@ -54,7 +55,7 @@ def evaluate(model: torch.nn.Module, split: str = "val",
 
     model.eval()
     with torch.inference_mode():
-        for images, y in loaders[split]:
+         for images, y in loaders[split]:
             images  = images.to(device)
             outputs = model(images)
             for t in TYPE_ORDER:
@@ -132,6 +133,45 @@ def show_predictions(image_path: str, predictions: dict):
     text = "\n\n".join(f"{t.upper()}\n{predictions[t]}" for t in TYPE_ORDER)
     ax_text.text(0.1, 0.95, text, va="top", fontsize=12, family="monospace",
                  transform=ax_text.transAxes)
+    plt.tight_layout()
+    plt.show()
+
+
+def show_attribute_showcase(model: torch.nn.Module, image_paths: list[str], device: str = None):
+    """Show multiple crops in one figure, each with its attribute predictions."""
+    from torchvision import transforms
+    _device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+    tf = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+
+    n   = len(image_paths)
+    fig = plt.figure(figsize=(10, n * 2.8))
+    gs  = plt.GridSpec(n, 2, width_ratios=[1, 2], hspace=0.55, wspace=0.15)
+
+    model.eval()
+    with torch.inference_mode():
+        for i, path in enumerate(image_paths):
+            img    = PILImage.open(path).convert("RGB")
+            tensor = tf(img).unsqueeze(0).to(_device)
+            logits = model(tensor)
+            preds  = {t: LABEL_NAMES[t][logits[t].argmax(dim=1).item()] for t in TYPE_ORDER}
+
+            ax_img = fig.add_subplot(gs[i, 0])
+            ax_img.imshow(img)
+            ax_img.axis("off")
+            label = os.path.basename(path).split("_img_")[0].replace("_", " ")
+            ax_img.set_title(label, fontsize=8, fontweight='bold')
+
+            ax_txt = fig.add_subplot(gs[i, 1])
+            ax_txt.axis("off")
+            lines = [f"{t:<10} {preds[t]}" for t in TYPE_ORDER]
+            ax_txt.text(0.02, 0.95, "\n".join(lines), va='top', fontsize=9,
+                        family='monospace', transform=ax_txt.transAxes, linespacing=1.85)
+
+    plt.suptitle("Attribute Predictions — Diverse Showcase", fontsize=13, fontweight='bold')
     plt.tight_layout()
     plt.show()
 

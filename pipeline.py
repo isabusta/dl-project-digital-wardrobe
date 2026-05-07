@@ -1,6 +1,10 @@
 import os
 import json
 import torch
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import matplotlib.gridspec as gridspec
+from PIL import Image as PILImage
 from torchvision import transforms
 from torchvision.ops import box_iou, nms
 from torch.utils.data import DataLoader
@@ -136,6 +140,80 @@ class Pipeline:
         with torch.inference_mode():
             logits = self.attr_model(tensor)
         return {t: LABEL_NAMES[t][logits[t].argmax(dim=1).item()] for t in TYPE_ORDER}
+
+    def demo_image(self, image_path: str, score_threshold: float = 0.5, title: str = None):
+        """Run full pipeline on one image and display a visualization."""
+        COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22']
+
+        pil_img    = PILImage.open(image_path).convert("RGB")
+        img_tensor = self.test_transform(pil_img)
+        boxes      = self.detect_objects(img_tensor, score_threshold=score_threshold)
+
+        if not len(boxes):
+            fig, ax = plt.subplots(figsize=(6, 6))
+            ax.imshow(img_tensor.permute(1, 2, 0).numpy())
+            ax.set_title("No items detected", fontsize=13)
+            ax.axis("off")
+            plt.tight_layout()
+            plt.show()
+            return
+
+        crops = self.crop_img(img_tensor, boxes)
+        n     = len(crops)
+
+        items = []
+        for box, crop in zip(boxes, crops):
+            pred_id, pred_label = self.predict(crop)
+            if self.attr_model is not None:
+                attrs = self.predict_attributes(crop)
+                if pred_label in self.BOTTOM_CATEGORIES:
+                    attrs = {k: v for k, v in attrs.items() if k in self.BOTTOM_ATTRS}
+            else:
+                attrs = {}
+            items.append({"box": box, "crop": crop, "label": pred_label, "attrs": attrs})
+
+        fig = plt.figure(figsize=(12, max(4, n * 3.2)))
+        gs  = gridspec.GridSpec(n, 3, width_ratios=[2, 1, 1.3], hspace=0.45, wspace=0.25)
+
+        ax_main = fig.add_subplot(gs[:, 0])
+        ax_main.imshow(img_tensor.permute(1, 2, 0).numpy())
+        ax_main.set_title(title or os.path.basename(image_path),
+                          fontsize=11, fontweight='bold')
+        ax_main.axis("off")
+
+        for i, item in enumerate(items):
+            color           = COLORS[i % len(COLORS)]
+            x1, y1, x2, y2 = item["box"]
+            ax_main.add_patch(patches.Rectangle(
+                (x1, y1), x2 - x1, y2 - y1,
+                linewidth=2.5, edgecolor=color, facecolor='none'
+            ))
+            ax_main.text(
+                x1 + 2, y1 + 13, f"#{i+1} {item['label']}",
+                color='white', fontsize=7.5, fontweight='bold',
+                bbox=dict(boxstyle='round,pad=0.2', facecolor=color, alpha=0.88)
+            )
+
+            ax_crop = fig.add_subplot(gs[i, 1])
+            ax_crop.imshow(item["crop"])
+            ax_crop.set_title(f"#{i+1}  {item['label']}", fontsize=9,
+                              fontweight='bold', color=color)
+            ax_crop.axis("off")
+
+            ax_attr = fig.add_subplot(gs[i, 2])
+            ax_attr.axis("off")
+            if item["attrs"]:
+                lines = [f"{k:<10} {v}" for k, v in item["attrs"].items()]
+                ax_attr.text(0.05, 0.92, "\n".join(lines), va='top', fontsize=9,
+                             family='monospace', transform=ax_attr.transAxes,
+                             linespacing=1.9)
+            else:
+                ax_attr.text(0.05, 0.5, "—", va='center', fontsize=9,
+                             color='gray', transform=ax_attr.transAxes)
+
+        plt.suptitle("Fashion Pipeline", fontsize=14, fontweight='bold', y=1.01)
+        plt.tight_layout()
+        plt.show()
 
     def evaluate(self, results, target):
         """

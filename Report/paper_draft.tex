@@ -26,20 +26,20 @@
 
 \maketitle
 
-\section{Introduction}
+\section{Introduction and Related Work}
 
- The fashion industry increasingly relies on intelligent systems capable of analyzing clothing items from images for applications such as online retail search, recommendation systems, inventory management, and trend analysis. Manual product annotation is time-consuming, costly, and often inconsistent, motivating automated approaches for clothing recognition and attribute prediction.
+The fashion industry nowadays relies on intelligent systems capable of analyzing clothing items from images for applications such as online retail search, recommendation systems and trend analysis. Manual product annotation is time-consuming, costly, and often inconsistent, motivating automated approaches for clothing recognition and attribute prediction.
 
 Automatic Visual analysis of clothing has gained growing importance in e-commerce and social media \cite{alamsyah_2019, wang_2018}.Recent work applies CNN-based methods to different datasets ranging from upper-body garments ~\cite{bossard_2012} and Instagram accessories ~\cite{alamsyah_2019} to fashion-brand catalogs, ~\cite{maryamah_2023},achieving strong results on classification, retrieval, and landmark detection ~\cite{alamsyah_2019,wang_2018}.
 However, ~\cite{wang_2018} note that many models lack domain-specific structure, and propose a knowledge-guided network that jointly localizes landmarks and classifies items using a fashion grammar prior. The results show that incorporating domain-specific knowledge improves performance compared to isolated neural network approaches.
 
+\textbf{Problem Definition} 
+This project addresses the task of \emph{fashion item recognition and attribute prediction}
+from images. Given an input image, the goal consists of three steps:
+(i) detect and segment fashion items,
+(ii) classify the item type (e.g., shirt, dress, trousers), and
+(iii) predict attributes such as pattern, sleeve length, neckline, fabric, or fit.
 
-\textbf{Problem Definition} In this project, we address the task of \emph{fashion item recognition and attribute prediction} from images. Given an input image containing one or multiple fashion products, the goal can be described as the following three steps:
-\begin{enumerate}
-    \item detect and segment: the fashion items present in the image,
-    \item classify the type: of each detected item (e.g., shirt, dress, trousers), and
-    \item predict attributes: describing each item, such as pattern, sleeve length, neckline, fabric, or fit.
-\end{enumerate}
 Formally, let $x \in \mathbb{R}^{H \times W \times C}$ denote an input image. The model learns a function
 \[
 f_\theta(x) = (y_c, y_a),
@@ -47,27 +47,27 @@ f_\theta(x) = (y_c, y_a),
 where $y_c$ represents the categorical class label(s) of fashion items and $y_a$ denotes a set of attribute predictions. The task therefore combines image classification with multi-label attribute recognition.
 
 \textbf{Evaluation Criteria}
-Model performance is evaluated using standard computer vision metrics. Classification accuracy is used to measure category prediction performance, while attribute prediction is evaluated using multi-label metrics such as precision and recall.
-\section{Dataset}
-We use two complementary datasets. Detection and segmentation are
-trained on DeepFashion2~\cite{deepfashion2}, which provides 100K
-images and 801K clothing items across 13 categories, annotated with
-bounding boxes, category labels, and pixel-level masks.
+Model performance is evaluated using standard computer vision metrics: Classification accuracy is used to measure category prediction performance, while attribute prediction is evaluated using multi-label metrics such as precision and recall.
 
-Since DeepFashion2 lacks attribute labels, the attribute classifier
+\section{Dataset}
+Two complementary datasets are used. Detection and segmentation are
+trained on DeepFashion2~\cite{ge2019deepfashion2}, which provides 100K
+images and 801K clothing items across 13 categories, annotated with
+bounding boxes, category labels, and pixel-level masks. Since DeepFashion2 lacks attribute labels, the attribute classifier
 is trained on a 20{,}000-image subset of the Category and Attribute
 Prediction Benchmark from DeepFashion~\cite{liu2016deepfashion}.
 The subset defines 26 attributes organized into six mutually
 exclusive groups pattern, sleeve length, garment length,
-neckline, fabric, and fit. Each was treated as an independent
-single-label classification task.
+neckline, fabric, and fit.
 
 \section{Method}
 \label{sec:method}
-We design a three-stage pipeline for detection, classification, and attribute prediction. Object detection serves as a preprocessing step to localize clothing items within each image; the cropped regions are then passed to the classification and attribute prediction models, ensuring each model focuses on relevant garment areas rather than background information.
+For object detection and classification, two deep learning approaches are investigated. First, a custom convolutional neural network (CNN) is developed and trained from scratch to learn visual representations without relying on pre-trained knowledge. Second, a transfer learning strategy is applied using pre-trained neural networks to detect fashion objects, classify clothing items, and predict their attributes. Object detection is used as a preprocessing step to localize clothing items within each image by predicting a bounding box. The cropped regions are then passed to the classification and attribute prediction models. This pipeline ensures that the models focus on relevant areas rather than background information, improving feature learning and prediction quality.
 
 \subsection{Model Architecture}
-Each stage of the pipeline uses a dedicated model. For object detection, a pre-trained Faster R-CNN is fine-tuned on DeepFashion2. For category classification, two approaches were explored: a custom CNN trained from scratch and transfer learning with EfficientNet. For attribute prediction, a multi-head EfficientNet variant is used. Table~\ref{tab:models} summarizes all models investigated.
+Two approaches were explored for category classification: a custom CNN trained from scratch
+  and transfer learning with EfficientNet. Table~\ref{tab:models} summarizes all models
+  investigated.
 
 \begin{table}[H]
 \centering
@@ -87,7 +87,7 @@ Attribute prediction     & EfficientNet-B0 / B2    & ImageNet     & 6 group logi
 
 \subsubsection{Object Detection}
 
-Object detection was performed using a Faster R-CNN ResNet50 FPN v2 model pre-trained on the COCO dataset and fine-tuned on DeepFashion2. The architecture combines a convolutional backbone for feature extraction with a Region Proposal Network (RPN) that generates anchor-based region proposals across feature maps and predicts foreground–background scores. The generated proposals are processed by a detection head that performs object classification and bounding box regression to refine object localization. During inference, numerous proposals are produced, but only those with the highest confidence scores are retained, while overlapping detections are removed to obtain the final set of precise bounding boxes.
+Object detection was performed using a Faster R-CNN ResNet50 FPN v2 model pre-trained on the COCO dataset and fine-tuned on DeepFashion2. The model uses a convolutional backbone for feature extraction and a Region Proposal Network (RPN) to generate candidate object regions. During inference, high-confidence proposals are retained while overlapping detections are suppressed, resulting in the final set of bounding boxes.
 
 Evaluation is performed using Mean Average Precision (mAP) and Mean Average Recall (mAR) using torchmetrics at an Intersection over Union (IoU) threshold of 0.75.
 Precision is defined as
@@ -105,26 +105,21 @@ and describes the proportion of correctly predicted boxes among all predictions,
 and describes the proportion of ground-truth objects that were correctly detected.
 Two boxes are considered a match if their overlap is at least 75$\%$. This strict threshold was chosen to only count precise localizations as correct. As shown in Figure~\ref{fig:train_res_obj_detection} (Appendix~\ref{app:figures}), the box loss is low; however, the mAP remains relatively low, which is attributed to the large number of generated boxes per object.
 
-
-
-
 \subsubsection{Category Classification}
+
+Two approaches were explored for category classification.
 
 \paragraph{Custom CNN}
 
-In a first approach a custom convolutional neural network (CNN) was developed and trained from scratch for fashion item recognition. The model follows a residual learning paradigm inspired by ResNet architectures, enabling stable training of deeper networks through improved gradient propagation.
-
-The network is built from residual blocks consisting of a convolutional transformation path and a skip connection. Each block contains three consecutive $3\times3$ convolutional layers with Batch Normalization and ReLU activation, where the final convolution is applied without activation before residual addition:
-1
+In a first approach a custom convolutional neural network (CNN) was developed and trained from scratch for fashion item recognition. The model follows a residual learning paradigm inspired by ResNet architectures\cite{DBLP:journals/corr/HeZRS15}. The network contains residual blocks consisting of a convolutional transformation path and a skip connection. Each block contains three consecutive $3\times3$ convolutional layers with Batch Normalization and ReLU activation, where the final convolution is applied without activation before residual addition:
 \[
 y = \mathrm{ReLU}(F(x) + S(x)).
-\]
-
-If input and output dimensions differ, the skip connection uses a $1\times1$ convolution with Batch Normalization; otherwise, an identity mapping is applied. The architecture comprises nine residual blocks with progressively increasing channel depth and spatial downsampling, reducing the input from $224\times224$ to $7\times7$. The classification head applies adaptive average pooling, dropout ($p=0.4$), and a fully connected output layer.
+\] 
+The architecture comprises nine residual blocks with progressively increasing channel depth and spatial downsampling, reducing the input from $224\times224$ to $7\times7$. The classification head applies adaptive average pooling, dropout ($p=0.4$), and a fully connected output layer.
 
 \paragraph{Transfer Learning with EfficientNet-B1/B2}
 
-Since the training results obtained with the custom CNN were not fully satisfactory, a transfer learning approach was explored. Pretrained EfficientNet-B1 and EfficientNet-B2 architectures were selected as backbone networks. EfficientNet models apply compound scaling, jointly adjusting network depth, width, and input resolution to achieve high accuracy with strong parameter efficiency. Both architectures consist of a convolutional stem followed by stacked MBConv blocks combining depthwise separable convolutions, squeeze-and-excitation modules, and residual connections. EfficientNet-B2 is a scaled-up variant of B1, providing more expressive feature learning at slightly increased computational cost. Both models were initialized with pre-trained weights and fine-tuned by replacing the original classification head with a task-specific fully connected layer.
+Since the training results obtained with the custom CNN were not fully satisfactory (see figure \ref{fig:train_ressults_res_cnn}), a transfer learning approach was explored. Pretrained EfficientNet-B1 and EfficientNet-B2 architectures were selected as backbone networks \cite{tan2020efficientnetrethinkingmodelscaling}. EfficientNet models apply compound scaling, jointly adjusting network depth, width, and input resolution to achieve high accuracy with strong parameter efficiency. Both architectures consist of a convolutional stem followed by stacked MBConv blocks combining depthwise separable convolutions, squeeze-and-excitation modules, and residual connections. EfficientNet-B2 is a scaled-up variant of B1, providing more expressive feature learning at slightly increased computational cost. Both models were initialized with pre-trained weights and fine-tuned by replacing the original classification head with a task-specific fully connected layer.
 
 \subsubsection{Attribute prediction}
 
@@ -150,7 +145,10 @@ with an identity mapping, and six fully connected heads were attached
 in parallel, each producing logits over the classes of one attribute
 group: texture (7), sleeve length (3), garment length (3), neckline
 (4), fabric (6), and fit (3). Together, these heads cover all 26
-dimensions of the DeepFashion attribute vector.
+dimensions of the DeepFashion attribute vector. Dropout ($p=0.3$) was
+applied between the backbone and the heads for the EfficientNet
+variants only, while ResNet-50 was regularized solely through weight
+decay.
 \subsection{Training Setup}
 
 Each stage uses a different dataset and partition, summarized in Table~\ref{tab:datasets}. For training the image classification models on DeepFashion2, training sets were constructed with an approximately uniform class distribution to reduce class imbalance. All images were scaled to $224\times224$ pixels. For attribute prediction, individual garment crops were first extracted from each image using the provided ground-truth bounding boxes. Training crops were augmented with random horizontal flips ($p=0.5$) and color jitter (brightness, contrast, and saturation $\pm 0.2$); validation and test crops were resized and normalized only.
@@ -223,7 +221,7 @@ EfficientNet-B0 weighted (selected)  &  4.0\,M & 30 & 0.8502 \\
 
 
 \section{Results}
-This section reports quantitative results for each stage of the pipeline and closes with a qualitative end-to-end evaluation. Qualitative examples of the detection filtering step are shown in Appendix~\ref{app:figures}.
+The pipeline combines object detection, category classification, and attribute prediction. Qualitative examples of the detection filtering step are shown in Appendix~\ref{app:figures}.
 
 \subsection{Object Detection}
 The Faster R-CNN model outputs all detected bounding boxes together with a confidence score. Boxes with a score below a predefined threshold (0.5) are first removed. Subsequently, Non-Maximum Suppression (NMS) is applied class-wise: if two boxes of the same label overlap significantly ($\text{IoU} > 0.5$), only the box with the higher score is retained. This prevents multiple detections of the same clothing item. Figure~\ref{fig:boxes_filtering_comparison} (Appendix~\ref{app:figures}) illustrates the effect of filtering on an example image. Each remaining bounding box is cropped and passed to the classification model.
@@ -282,11 +280,11 @@ End-to-end attribute quality is assessed qualitatively since DeepFashion2 provid
 \section{Conclusion}
 
 % TODO: write conclusion
-
 One limitation of the attribute prediction evaluation is that the model was trained and tested on ground-truth crops, where bounding boxes are provided by the dataset rather than predicted by the detector. In the full pipeline, crops are produced by Faster R-CNN and may be slightly misaligned or incorrectly sized. The reported 84.4\% mean accuracy is therefore the best-case performance. The actual accuracy when running the full pipeline may be lower, but was not measured.
-
+\clearpage
 \appendix
-\section{Figures}
+\section{Appendix}
+\subsection{Figures}
 \label{app:figures}
 
 \begin{figure}[H]
@@ -298,10 +296,11 @@ One limitation of the attribute prediction evaluation is that the model was trai
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth]{/Users/isabellebustamante/PycharmProjects/DL_Project_Digital_Wardrobe/out/figures/pipeline_demo}
-    \caption{Full pipeline output on an example held-out test image. Each detected garment is shown with its predicted category label and attribute predictions (texture, sleeve, length, neckline, fabric, fit). Sleeve and neckline attributes are omitted for bottom garments.}
-    \label{fig:pipeline_demo}
+    \includegraphics[width=0.8\textwidth]{figures/train_results_res_cnn.png}
+    \caption{Train performance Custom Residual CNN}
+    \label{fig:train_ressults_res_cnn}
 \end{figure}
+
 
 \begin{figure}[H]
     \centering

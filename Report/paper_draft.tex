@@ -40,7 +40,7 @@ CNN-based methods have achieved strong results on clothing classification~\cite{
 
 Jointly predicting multiple attributes remains challenging: the same garment can look very different depending on pose and context, category boundaries are visually ambiguous (e.g., skirts vs. short dresses), and attributes such as material or shape rely on different visual cues than category identity. Amin et al.~\cite{amin2023fsap} had to construct a dedicated 300k-image dataset with 30 domain experts to capture sufficient attribute-level labels.
 
-Given an input image, the pipeline (i) detects and segments fashion items, (ii) classifies the item type (e.g., shirt, dress, trousers), and (iii) predicts fine-grained attributes such as pattern, sleeve length, neckline, fabric, or fit. Each stage is evaluated separately: detection by mAP and mAR at IoU\,$\geq$\,0.75; classification by accuracy and coverage over a held-out test set; and attribute prediction by per-head accuracy and macro F1 across the six attribute groups.
+Given an input image, the pipeline (i) detects fashion items, (ii) classifies the item type (e.g., shirt, dress, trousers), and (iii) predicts fine-grained attributes such as pattern, sleeve length, neckline, fabric, or fit. Each stage is evaluated separately: detection by mAP and mAR at IoU\,$\geq$\,0.75; classification by accuracy and coverage over a held-out test set; and attribute prediction by per-head accuracy and macro F1 across the six attribute groups.
 
 \section{Method}
 \label{sec:method}

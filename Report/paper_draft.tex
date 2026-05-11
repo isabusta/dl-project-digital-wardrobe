@@ -49,7 +49,7 @@ The task can be described as follows: Given an input image, the pipeline (i) det
 The pipeline uses a dedicated model at each stage: Object detection first localizes the clothing items, then cropped regions are passed to the classification and attribute prediction models. Table~\ref{tab:models} (Appendix~\ref{app:tables}) summarizes all models investigated.
 
 \paragraph{Object Detection}
-Object detection was performed using a Faster R-CNN ResNet50 FPN v2 model pre-trained on the COCO dataset and fine-tuned on DeepFashion2. The model uses a convolutional backbone for feature extraction and a Region Proposal Network (RPN) to generate candidate object regions. During inference, high-confidence proposals are retained while overlapping detections are suppressed, to yield the final set of bounding boxes.
+Object detection was performed using a Faster R-CNN ResNet50 FPN v2 model pre-trained on the COCO dataset and fine-tuned on DeepFashion2. The model uses a convolutional backbone for feature extraction and a Region Proposal Network (RPN) to generate candidate object regions~\cite{yenigun_r-cnn_2025}. During inference, high-confidence proposals are retained while overlapping detections are suppressed, to yield the final set of bounding boxes.
 
 mAP and mAR are computed with torchmetrics at an Intersection over Union (IoU) threshold of 0.75.
 Precision ($= TP/(TP{+}FP)$) and Recall ($= TP/(TP{+}FN)$) measure the proportion of correct box predictions and the proportion of ground-truth objects detected, respectively.

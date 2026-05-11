@@ -40,7 +40,7 @@ CNN-based methods have achieved strong results on clothing classification~\cite{
 
 Jointly predicting multiple attributes remains challenging: the same garment can look very different depending on pose and context, category boundaries are visually ambiguous (e.g., skirts vs. short dresses), and attributes such as material or shape rely on different visual cues than category identity. Amin et al.~\cite{amin2023fsap} had to construct a dedicated 300k-image dataset with 30 domain experts to capture sufficient attribute-level labels.
 
-The task can be described as follows: Given an input image, the pipeline (i) detects fashion items, (ii) classifies the item type (e.g., shirt, dress, trousers), and (iii) predicts fine-grained attributes such as pattern, sleeve length, neckline, fabric, or fit. Each stage is evaluated separately: detection by mAP and mAR at IoU\,$\geq$\,0.75; classification by accuracy and coverage over a held-out test set; and attribute prediction by per-head accuracy and macro F1 across the six attribute groups.
+The task can be described as follows: Given an input image, the pipeline (i) detects fashion items, (ii) classifies the item category (e.g., shirt, dress, trousers), and (iii) predicts fine-grained attributes such as pattern, sleeve length, neckline, fabric, or fit. Each stage is evaluated separately: Detection by Mean Average Precision (mAP) and Mean Average Recall (mAR) at IoU\,$\geq$\,0.75; classification by accuracy and coverage over a held-out test set; and attribute prediction by per-head accuracy and macro F1 across the six attribute groups.
 
 \section{Method}
 \label{sec:method}
@@ -52,7 +52,7 @@ The pipeline uses a dedicated model at each stage: object detection first locali
 \paragraph{Object Detection}
 Object detection was performed using a Faster R-CNN ResNet50 FPN v2 model pre-trained on the COCO dataset and fine-tuned on DeepFashion2. The model uses a convolutional backbone for feature extraction and a Region Proposal Network (RPN) to generate candidate object regions. During inference, high-confidence proposals are retained while overlapping detections are suppressed, to yield the final set of bounding boxes.
 
-Mean Average Precision (mAP) and Mean Average Recall (mAR) are computed with torchmetrics at an Intersection over Union (IoU) threshold of 0.75.
+mAP and mAR are computed with torchmetrics at an Intersection over Union (IoU) threshold of 0.75.
 Precision ($= TP/(TP{+}FP)$) and Recall ($= TP/(TP{+}FN)$) measure the proportion of correct box predictions and the proportion of ground-truth objects detected, respectively.
 Two boxes are considered a match if their overlap is at least 75$\%$. This strict threshold was chosen to only count precise localizations as correct. As shown in Figure~\ref{fig:train_res_obj_detection} (Appendix~\ref{app:figures}), the box loss is low; however, the mAP remains relatively low, which is attributed to the large number of generated boxes per object.
 

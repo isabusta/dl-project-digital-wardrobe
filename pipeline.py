@@ -141,8 +141,14 @@ class Pipeline:
             logits = self.attr_model(tensor)
         return {t: LABEL_NAMES[t][logits[t].argmax(dim=1).item()] for t in TYPE_ORDER}
 
-    def demo_image(self, image_path: str, score_threshold: float = 0.5, title: str = None):
-        """Run full pipeline on one image and display a visualization."""
+    def demo_image(self, image_path: str, score_threshold: float = 0.5,
+                   title: str = None, save_path: str = None):
+        """Run full pipeline on one image and display a visualization.
+
+        Args:
+            save_path: if provided, saves the figure to this path instead of
+                       (or in addition to) showing it.
+        """
         COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22']
 
         pil_img    = PILImage.open(image_path).convert("RGB")
@@ -155,6 +161,8 @@ class Pipeline:
             ax.set_title("No items detected", fontsize=13)
             ax.axis("off")
             plt.tight_layout()
+            if save_path:
+                plt.savefig(save_path, bbox_inches='tight', dpi=150)
             plt.show()
             return
 
@@ -213,6 +221,9 @@ class Pipeline:
 
         plt.suptitle("Fashion Pipeline", fontsize=14, fontweight='bold', y=1.01)
         plt.tight_layout()
+        if save_path:
+            os.makedirs(os.path.dirname(save_path) or '.', exist_ok=True)
+            plt.savefig(save_path, bbox_inches='tight', dpi=150)
         plt.show()
 
     def evaluate(self, results, target):
@@ -234,14 +245,14 @@ class Pipeline:
 
         if detected == 0:
             return {
-                "total":          total,
-                "detected":       0,
-                "exact_match":    0,
-                "coverage":       0.0,
-                "precision":      0.0,
+                "total":       total,
+                "detected":    0,
+                "exact_match": 0,
+                "coverage":    0.0,
+                "precision":   0.0,
             }
 
-        # Exact Matches 
+        # Exact Matches
         # only valid if detected == total
         # count how many predicted labels are in GT (no duplicates)
         gt_remaining = gt_label_list.copy()
@@ -254,21 +265,60 @@ class Pipeline:
         exact_match = 1 if (detected == total and matched == total) else 0
 
         # Coverage + Precision
-        # coverage: how many GT labels are covered by predictions
         coverage  = matched / total if total > 0 else 0.0
-
-        # precision: penalize if more boxes predicted than GT
-        # if detected == total => precision = 1.0 
-        # if detected > total  => precision < 1.0
         precision = total / detected if detected > total else 1.0
 
         return {
             "total":       total,
             "detected":    detected,
-            "exact_match": exact_match,   # 1 for exact match, 0 otherwise
-            "coverage":    round(coverage,  4),  # GT labels found
-            "precision":   round(precision, 4),  # penalty for extra boxes
+            "exact_match": exact_match,
+            "coverage":    round(coverage,  4),
+            "precision":   round(precision, 4),
         }
+
+    def evaluate_attribute_crops(self, crops_root: str, split: str = 'test',
+                                  batch_size: int = 64) -> dict:
+        """Evaluate the pipeline's attribute model on pre-cropped images from
+        the DeepFashion attribute dataset.  Returns per-head accuracy and the
+        overall mean accuracy, matching the standalone attribute_evaluation output.
+
+        Args:
+            crops_root:  root directory containing the crops and labels.csv
+            split:       dataset split to evaluate ('val' or 'test')
+            batch_size:  batch size for inference
+        """
+        from attribute_data import AttributeDataset, build_eval_transform
+
+        assert self.attr_model is not None, "Pipeline has no attribute model loaded."
+
+        transform  = build_eval_transform()
+        dataset    = AttributeDataset(crops_root, split=split, transform=transform)
+        loader     = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=2)
+
+        correct = {t: 0 for t in TYPE_ORDER}
+        total_samples = 0
+
+        self.attr_model.eval()
+        with torch.inference_mode():
+            for imgs, labels in tqdm(loader, desc=f"Attribute eval ({split})"):
+                imgs = imgs.to(self.device)
+                logits = self.attr_model(imgs)
+                for t in TYPE_ORDER:
+                    preds = logits[t].argmax(dim=1).cpu()
+                    correct[t] += (preds == labels[t]).sum().item()
+                total_samples += imgs.size(0)
+
+        per_head = {t: round(correct[t] / total_samples, 4) for t in TYPE_ORDER}
+        overall  = round(sum(per_head.values()) / len(TYPE_ORDER), 4)
+
+        print(f"\n{'='*40}")
+        print(f"  Attribute eval on {split} split ({total_samples} samples)")
+        print(f"{'='*40}")
+        for t, acc in per_head.items():
+            print(f"  {t:<10} {acc:.4f}")
+        print(f"  {'mean':<10} {overall:.4f}")
+
+        return {"split": split, "overall_mean_accuracy": overall, "heads": per_head}
 
     def run(self, test_data_path, output_dir='predictions', json_res = 'eval_results.json'):
         """
@@ -283,10 +333,10 @@ class Pipeline:
                                   collate_fn=collate_fn, num_workers=2)
 
     
-        all_exact    = 0
-        all_coverage = 0.0
-        all_precision = 0.0 
-        all_images   = 0
+        all_exact       = 0
+        all_coverage    = 0.0
+        all_precision   = 0.0
+        all_images      = 0
         all_extra_boxes = 0
 
         for img_idx, (images, targets) in enumerate(tqdm(test_loader, desc="Running Pipeline")):
@@ -323,12 +373,12 @@ class Pipeline:
 
             # evaluation against ground truth
             if self.eval_mode:
-                scores        = self.evaluate(results, target)
-                all_exact    += scores['exact_match']
-                all_coverage += scores['coverage']
-                all_precision += scores['precision']
-                all_images   += 1
-                extra_boxes = max(0, scores['detected'] - scores['total'])
+                scores          = self.evaluate(results, target)
+                all_exact      += scores['exact_match']
+                all_coverage   += scores['coverage']
+                all_precision  += scores['precision']
+                all_images     += 1
+                extra_boxes     = max(0, scores['detected'] - scores['total'])
                 all_extra_boxes += extra_boxes
 
             # print result
@@ -357,8 +407,8 @@ class Pipeline:
             print(f"\nDone! {all_images} images")
             print(f"Exact Match:  {all_exact}/{all_images}  = {all_exact/all_images:.2%}")
             print(f"Avg Coverage: {all_coverage/all_images:.2%}")
-            print(f"Avg Precision: {all_precision/all_images:.2%}") 
-            print(f"Avg Extra Boxes: {all_extra_boxes/all_images:.2%}") 
+            print(f"Avg Precision: {all_precision/all_images:.2%}")
+            print(f"Avg Extra Boxes: {all_extra_boxes/all_images:.2%}")
 
             summary = {
                 "total_images":    all_images,

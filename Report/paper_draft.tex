@@ -40,24 +40,23 @@ CNN-based methods have achieved strong results on clothing classification~\cite{
 
 Jointly predicting multiple attributes remains challenging: the same garment can look very different depending on pose and context, category boundaries are visually ambiguous (e.g., skirts vs. short dresses), and attributes such as material or shape rely on different visual cues than category identity. Amin et al.~\cite{amin2023fsap} had to construct a dedicated 300k-image dataset with 30 domain experts to capture sufficient attribute-level labels.
 
-Given an input image, the pipeline (i) detects fashion items, (ii) classifies the item type (e.g., shirt, dress, trousers), and (iii) predicts fine-grained attributes such as pattern, sleeve length, neckline, fabric, or fit. Each stage is evaluated separately: detection by mAP and mAR at IoU\,$\geq$\,0.75; classification by accuracy and coverage over a held-out test set; and attribute prediction by per-head accuracy and macro F1 across the six attribute groups.
+The task can be described as follows: Given an input image, the pipeline (i) detects fashion items, (ii) classifies the item category (e.g., shirt, dress, trousers), and (iii) predicts fine-grained attributes such as pattern, sleeve length, neckline, fabric, or fit. Each stage is evaluated separately: Detection by Mean Average Precision (mAP) and Mean Average Recall (mAR) at IoU\,$\geq$\,0.75; classification by accuracy and coverage over a held-out test set; and attribute prediction by per-head accuracy and macro F1 across the six attribute groups.
 
 \section{Method}
 \label{sec:method}
 
 \subsection{Model Architecture}
-The pipeline uses a dedicated model at each stage: object detection first localizes clothing items, then cropped regions are passed to the classification and attribute prediction models. Table~\ref{tab:models} (Appendix~\ref{app:tables}) summarizes all models investigated.
-
+The pipeline uses a dedicated model at each stage: Object detection first localizes the clothing items, then cropped regions are passed to the classification and attribute prediction models. Table~\ref{tab:models} (Appendix~\ref{app:tables}) summarizes all models investigated.
 
 \paragraph{Object Detection}
 Object detection was performed using a Faster R-CNN ResNet50 FPN v2 model pre-trained on the COCO dataset and fine-tuned on DeepFashion2. The model uses a convolutional backbone for feature extraction and a Region Proposal Network (RPN) to generate candidate object regions. During inference, high-confidence proposals are retained while overlapping detections are suppressed, to yield the final set of bounding boxes.
 
-Mean Average Precision (mAP) and Mean Average Recall (mAR) are computed with torchmetrics at an Intersection over Union (IoU) threshold of 0.75.
+mAP and mAR are computed with torchmetrics at an Intersection over Union (IoU) threshold of 0.75.
 Precision ($= TP/(TP{+}FP)$) and Recall ($= TP/(TP{+}FN)$) measure the proportion of correct box predictions and the proportion of ground-truth objects detected, respectively.
 Two boxes are considered a match if their overlap is at least 75$\%$. This strict threshold was chosen to only count precise localizations as correct. As shown in Figure~\ref{fig:train_res_obj_detection} (Appendix~\ref{app:figures}), the box loss is low; however, the mAP remains relatively low, which is attributed to the large number of generated boxes per object.
 
 \paragraph{Classification: Custom CNN}
-In a first approach a custom CNN was developed and trained from scratch in a residual learning paradigm~\cite{DBLP:journals/corr/HeZRS15}: each block combines a convolutional transformation path with a skip connection. Each block contains three consecutive $3\times3$ convolutional layers with Batch Normalization and ReLU activation, where the final convolution is applied without activation before residual addition: $y = \mathrm{ReLU}(F(x) + S(x))$. The architecture comprises nine residual blocks with progressively deeper channels and spatial downsampling that reduce the input from $224\times224$ to $7\times7$. The classification head applies adaptive average pooling, dropout ($p=0.4$), and a fully connected output layer.
+In a first approach a custom CNN was developed and trained from scratch using a residual learning paradigm~\cite{DBLP:journals/corr/HeZRS15}: Each block combines a convolutional transformation path with a skip connection. Each block contains three consecutive $3\times3$ convolutional layers with Batch Normalization and ReLU activation, where the final convolution is applied without activation before residual addition: $y = \mathrm{ReLU}(F(x) + S(x))$. The architecture comprises nine residual blocks with progressively deeper channels and spatial downsampling that reduce the input from $224\times224$ to $7\times7$. The classification head applies adaptive average pooling, dropout ($p=0.4$), and a fully connected output layer.
 
 \paragraph{Classification: Transfer Learning with EfficientNet}
 Since the training results obtained with the custom CNN were not fully satisfactory (see Figure \ref{fig:train_ressults_res_cnn}), a transfer learning approach was explored. Pretrained EfficientNet-B1 and EfficientNet-B2 \cite{tan2020efficientnetrethinkingmodelscaling} were selected as backbone networks. EfficientNet applies compound scaling (a joint adjustment of depth, width, and resolution) for high accuracy with strong parameter efficiency. Both models were fine-tuned with the classification head replaced by a task-specific fully connected layer.

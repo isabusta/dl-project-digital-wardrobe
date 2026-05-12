@@ -131,11 +131,7 @@ End-to-end attribute quality is assessed qualitatively since DeepFashion2 provid
 
 \section{Conclusion}
 
-This project implemented and evaluated a three-stage pipeline for fashion item detection, category classification, and attribute prediction. The best-performing models for object detection and category classification achieved 33.42\% exact match and 69.62\% coverage on the pipeline evaluation, and the best attribute model reached a mean accuracy of 84.4\% across six attribute groups. Staged fine-tuning and weighted loss for class imbalance both proved effective.
-
-A key insight was that the bottleneck in the full pipeline lies in classification rather than detection: box localization was reliable and the NMS filter delivered clean crops, but poor classification produced conflicting labels across duplicate boxes and compounded errors downstream. Image quality variation across the dataset (lighting, contrast, background clutter) also made generalization harder than anticipated, and stronger backbones tended to overfit.
-
-For future work, an improvement would be to evaluate the attribute model on detector-predicted crops rather than ground-truth boxes, to obtain a true end-to-end accuracy measure.
+Despite confidence-score filtering and NMS, the detector still produced too many bounding boxes per image, which directly reduced exact match scores and propagated errors downstream. Since classification operates on detector-predicted crops in our pipeline, duplicate or spurious boxes  lead to conflicting or redundant labels, compounding inaccuracies at every subsequent stage. Image quality variation across the dataset (lighting, contrast, background clutter) also made generalization harder than anticipated, and stronger backbones tended to overfit.
 \clearpage
 \appendix
 \section{Appendix}
@@ -151,9 +147,21 @@ For future work, an improvement would be to evaluate the attribute model on dete
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{figures/train_results_res_cnn.png}
-    \caption{Training performance of the custom residual CNN.}
-    \label{fig:train_ressults_res_cnn}
+    \begin{subfigure}{0.49\textwidth}
+        \centering
+        \includegraphics[height=5cm, keepaspectratio]{figures/train_results_res_cnn.png}
+        \caption{Training performance of the custom residual CNN.}
+        \label{fig:train_ressults_res_cnn}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.49\textwidth}
+        \centering
+        \includegraphics[height=5cm, keepaspectratio]{figures/efficient_net_b2_train_performance.png}
+        \caption{EfficientNet-B2 train performance.}
+        \label{fig:e_net_train_performance}
+    \end{subfigure}
+    \caption{Classification Train Performance}
+    \label{fig:train_results}
 \end{figure}
 
 
